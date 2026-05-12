@@ -38,6 +38,3 @@ class UserResponse(BaseModel):
     telefone: str
     email: str
     data_nascimento: Optional[date] = None
-
-    class Config:
-        from_attributes = True

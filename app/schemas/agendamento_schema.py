@@ -28,6 +28,3 @@ class AgendamentoResponse(BaseModel):
     data_inicio: date
     data_fim: Optional[date] = None
     ativo: bool
-
-    class Config:
-        from_attributes = True

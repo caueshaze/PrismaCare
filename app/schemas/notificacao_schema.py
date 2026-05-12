@@ -26,6 +26,3 @@ class NotificacaoResponse(BaseModel):
     data_hora_envio: datetime
     tipo_mensagem: str
     status_envio: str
-
-    class Config:
-        from_attributes = True
