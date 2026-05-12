@@ -38,7 +38,10 @@ def listar_users(
     usuario: dict = Depends(obter_usuario_logado),
     conn: sqlite3.Connection = Depends(get_db),
 ):
-    return user_repo.listar_usuarios(conn)
+    user = user_repo.buscar_usuario_por_id(conn, usuario["id"])
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    return [user]
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
@@ -47,6 +50,8 @@ def buscar_user(
     usuario: dict = Depends(obter_usuario_logado),
     conn: sqlite3.Connection = Depends(get_db),
 ):
+    if user_id != usuario["id"]:
+        raise HTTPException(status_code=403, detail="Acesso negado")
     user = user_repo.buscar_usuario_por_id(conn, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
