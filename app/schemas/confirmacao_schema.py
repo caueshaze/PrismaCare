@@ -25,6 +25,3 @@ class ConfirmacaoResponse(BaseModel):
     data_hora_prevista: datetime
     data_hora_confirmacao: Optional[datetime] = None
     status: str
-
-    class Config:
-        from_attributes = True

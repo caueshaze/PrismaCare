@@ -1,33 +1,33 @@
+import sqlite3
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.database import get_db
-from app.models.user import User
-from app.security import verificar_senha
+from app.repositories import user_repo
+from app.security import verificar_senha, criar_token
 
 router = APIRouter()
 
 
-class LoginRequest(BaseModel):
-    email: str
-    senha: str
-
-
 @router.post("/login")
-def login(dados: LoginRequest, db: Session = Depends(get_db)):
-    # Busca o usuário pelo e-mail
-    user = db.query(User).filter(User.email == dados.email.lower()).first()
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    user = user_repo.buscar_usuario_por_email(conn, form_data.username.lower())
 
-    # Se não encontrou o usuário ou a senha estiver errada, retorna erro
-    if not user or not verificar_senha(dados.senha, user.senha):
+    if not user or not verificar_senha(form_data.password, user["senha"]):
         raise HTTPException(status_code=401, detail="E-mail ou senha incorretos")
 
+    token = criar_token(user["id"], user["email"])
+
     return {
-        "message": "Login realizado com sucesso",
+        "access_token": token,
+        "token_type": "bearer",
         "user": {
-            "id": user.id,
-            "nome": user.nome,
-            "email": user.email
-        }
+            "id": user["id"],
+            "nome": user["nome"],
+            "email": user["email"],
+        },
     }
