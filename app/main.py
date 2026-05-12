@@ -1,0 +1,43 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.database import engine, Base
+from app.models.user import User
+from app.models.medicamento import Medicamento
+from app.models.contato import Contato
+from app.models.agendamento import Agendamento
+from app.models.confirmacao import Confirmacao
+from app.models.notificacao import Notificacao
+
+from app.routes.user_route import router as user_router
+from app.routes.medicamento_route import router as medicamento_router
+from app.routes.contato_route import router as contato_router
+from app.routes.agendamento_route import router as agendamento_router
+from app.routes.confirmacao_route import router as confirmacao_router
+from app.routes.notificacao_route import router as notificacao_router
+from app.routes.login_route import router as login_router
+
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="PrismaCare API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(login_router, prefix="/api", tags=["Login"])
+app.include_router(user_router, prefix="/api", tags=["Usuários"])
+app.include_router(medicamento_router, prefix="/api", tags=["Medicamentos"])
+app.include_router(contato_router, prefix="/api", tags=["Contatos"])
+app.include_router(agendamento_router, prefix="/api", tags=["Agendamentos"])
+app.include_router(confirmacao_router, prefix="/api", tags=["Confirmações"])
+app.include_router(notificacao_router, prefix="/api", tags=["Notificações"])
+
+
+@app.get("/")
+def home():
+    return {"message": "PrismaCare API funcionando"}
