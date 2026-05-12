@@ -3,7 +3,6 @@ from typing import Optional
 
 
 class MedicamentoCreate(BaseModel):
-    id_usuario: int
     nome: str
     dosagem: str
     observacao: Optional[str] = None  # campo opcional
@@ -24,6 +23,3 @@ class MedicamentoResponse(BaseModel):
     dosagem: str
     observacao: Optional[str] = None
     ativo: bool
-
-    class Config:
-        from_attributes = True

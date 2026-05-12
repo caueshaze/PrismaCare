@@ -2,7 +2,6 @@ from pydantic import BaseModel, field_validator
 
 
 class ContatoCreate(BaseModel):
-    id_usuario: int
     nome: str
     telefone: str
     parentesco: str
@@ -23,6 +22,3 @@ class ContatoResponse(BaseModel):
     telefone: str
     parentesco: str
     ativo: bool
-
-    class Config:
-        from_attributes = True
