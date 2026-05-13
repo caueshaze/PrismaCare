@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import settings
 from app.database import init_db
+from app.middleware.security_middleware import SecurityMiddleware
 from app.routes.user_route import router as user_router
 from app.routes.medicamento_route import router as medicamento_router
 from app.routes.contato_route import router as contato_router
@@ -9,6 +11,7 @@ from app.routes.agendamento_route import router as agendamento_router
 from app.routes.confirmacao_route import router as confirmacao_router
 from app.routes.notificacao_route import router as notificacao_router
 from app.routes.login_route import router as login_router
+from app.routes.auth_route import router as auth_router
 
 init_db()
 
@@ -16,13 +19,15 @@ app = FastAPI(title="PrismaCare API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityMiddleware)
 
 app.include_router(login_router, prefix="/api", tags=["Login"])
+app.include_router(auth_router, prefix="/api")
 app.include_router(user_router, prefix="/api", tags=["Usuários"])
 app.include_router(medicamento_router, prefix="/api", tags=["Medicamentos"])
 app.include_router(contato_router, prefix="/api", tags=["Contatos"])
