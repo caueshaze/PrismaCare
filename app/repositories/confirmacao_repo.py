@@ -49,6 +49,30 @@ def atualizar_confirmacao(conn: sqlite3.Connection, confirmacao_id: int,
     return buscar_confirmacao_por_id(conn, confirmacao_id)
 
 
+def buscar_confirmacoes_atrasadas(conn: sqlite3.Connection) -> list[dict]:
+    rows = conn.execute(
+        """SELECT c.id AS confirmacao_id, ct.id AS contato_id
+           FROM confirmacoes c
+           JOIN agendamentos a ON c.id_agendamento = a.id
+           JOIN medicamentos m ON a.id_medicamento = m.id
+           JOIN users u ON m.id_usuario = u.id
+           JOIN contatos ct ON u.id = ct.id_usuario
+           WHERE c.data_hora_confirmacao IS NULL
+             AND c.data_hora_prevista < datetime('now', '-30 minutes')
+             AND c.status = 'pendente'
+             AND ct.ativo = 1"""
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def marcar_como_atrasado_notificado(conn: sqlite3.Connection, confirmacao_id: int) -> None:
+    conn.execute(
+        "UPDATE confirmacoes SET status = 'atrasado_notificado' WHERE id = ?",
+        (confirmacao_id,),
+    )
+    conn.commit()
+
+
 def pertence_ao_usuario(conn: sqlite3.Connection, confirmacao_id: int, id_usuario: int) -> bool:
     row = conn.execute(
         """SELECT c.id FROM confirmacoes c

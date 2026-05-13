@@ -1,3 +1,6 @@
+from contextlib import asynccontextmanager
+
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,10 +15,21 @@ from app.routes.confirmacao_route import router as confirmacao_router
 from app.routes.notificacao_route import router as notificacao_router
 from app.routes.login_route import router as login_router
 from app.routes.auth_route import router as auth_router
+from app.routes.monitor_route import router as monitor_router
+from app.services.monitor_service import varrer_e_notificar
 
-init_db()
 
-app = FastAPI(title="PrismaCare API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(varrer_e_notificar, "interval", minutes=5, id="monitor_varredura")
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
+
+app = FastAPI(title="PrismaCare API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,6 +48,7 @@ app.include_router(contato_router, prefix="/api", tags=["Contatos"])
 app.include_router(agendamento_router, prefix="/api", tags=["Agendamentos"])
 app.include_router(confirmacao_router, prefix="/api", tags=["Confirmações"])
 app.include_router(notificacao_router, prefix="/api", tags=["Notificações"])
+app.include_router(monitor_router, prefix="/api", tags=["Monitor"])
 
 
 @app.get("/")
