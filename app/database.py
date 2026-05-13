@@ -130,6 +130,9 @@ def init_db():
 
             CREATE UNIQUE INDEX IF NOT EXISTS idx_login_attempts_email_ip
             ON login_attempts (email, ip);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_notificacoes_confirmacao_contato
+            ON notificacoes (id_confirmacao, id_contato);
         """)
         conn.commit()
     finally:
