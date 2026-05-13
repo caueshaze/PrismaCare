@@ -18,7 +18,7 @@ from app.repositories import auth_repo, user_repo
 from app.security import extrair_payload, gerar_par_tokens, hash_token, verificar_senha
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-legacy_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 class RefreshRequest(BaseModel):
@@ -207,7 +207,7 @@ def refresh_token(
 def logout(
     request: Request,
     payload: LogoutRequest,
-    token: str = Depends(legacy_oauth2_scheme),
+    token: str = Depends(oauth2_scheme),
     conn: sqlite3.Connection = Depends(get_db),
 ):
     decoded = extrair_payload(token, expected_type="access")
@@ -237,7 +237,7 @@ def logout(
 @router.post("/logout-all")
 def logout_all(
     request: Request,
-    token: str = Depends(legacy_oauth2_scheme),
+    token: str = Depends(oauth2_scheme),
     conn: sqlite3.Connection = Depends(get_db),
 ):
     decoded = extrair_payload(token, expected_type="access")
