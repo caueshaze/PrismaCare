@@ -34,6 +34,14 @@ def buscar_notificacao_por_id(conn: sqlite3.Connection, notificacao_id: int) -> 
     return dict(row) if row else None
 
 
+def notificacao_ja_existe(conn: sqlite3.Connection, id_confirmacao: int, id_contato: int) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM notificacoes WHERE id_confirmacao = ? AND id_contato = ?",
+        (id_confirmacao, id_contato),
+    ).fetchone()
+    return row is not None
+
+
 def pertence_ao_usuario(conn: sqlite3.Connection, notificacao_id: int, id_usuario: int) -> bool:
     row = conn.execute(
         """SELECT n.id FROM notificacoes n
