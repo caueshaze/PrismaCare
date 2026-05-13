@@ -13,7 +13,6 @@ from app.routes.contato_route import router as contato_router
 from app.routes.agendamento_route import router as agendamento_router
 from app.routes.confirmacao_route import router as confirmacao_router
 from app.routes.notificacao_route import router as notificacao_router
-from app.routes.login_route import router as login_router
 from app.routes.auth_route import router as auth_router
 from app.routes.monitor_route import router as monitor_router
 from app.services.monitor_service import varrer_e_notificar
@@ -40,7 +39,6 @@ app.add_middleware(
 )
 app.add_middleware(SecurityMiddleware)
 
-app.include_router(login_router, prefix="/api", tags=["Login"])
 app.include_router(auth_router, prefix="/api")
 app.include_router(user_router, prefix="/api", tags=["Usuários"])
 app.include_router(medicamento_router, prefix="/api", tags=["Medicamentos"])

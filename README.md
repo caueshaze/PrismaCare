@@ -3,8 +3,7 @@ O PrismaCare é uma plataforma voltada ao agendamento e acompanhamento de medica
 
 ## Segurança (Backend)
 - Autenticação com JWT `access + refresh` com rotação/revogação de sessão.
-- Endpoint legado `/api/login` mantido por compatibilidade temporária.
-- Novos endpoints:
+- Endpoints de autenticação:
   - `POST /api/auth/login`
   - `POST /api/auth/refresh`
   - `POST /api/auth/logout`
@@ -118,5 +117,4 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ## Observações
 - O banco SQLite (`prismacare.db`) é criado automaticamente na primeira execução.
 - O backend carrega `.env` automaticamente na inicialização.
-- O endpoint legado `/api/login` segue ativo por compatibilidade.
-- O fluxo recomendado é usar os endpoints em `/api/auth/*`.
+- Use os endpoints em `/api/auth/*` para autenticação.
