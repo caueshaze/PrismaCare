@@ -1,4 +1,6 @@
+import hashlib
 import sqlite3
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -6,13 +8,11 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
+from app.core.audit import audit_event
+from app.core.config import settings
 from app.database import get_db
 
-SECRET_KEY = "prismacare-secret-key-alterar-em-producao"
-ALGORITHM = "HS256"
-TOKEN_EXPIRATION_MINUTES = 60
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def hash_senha(senha: str) -> str:
@@ -28,13 +28,50 @@ def verificar_senha(senha: str, senha_hash: str) -> bool:
     )
 
 
-def criar_token(user_id: int, email: str) -> str:
-    payload = {
+def gerar_par_tokens(user_id: int, email: str, session_id: str | None = None) -> tuple[str, str, str]:
+    session = session_id or str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+
+    access_payload = {
         "sub": str(user_id),
         "email": email,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRATION_MINUTES),
+        "sid": session,
+        "typ": "access",
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.access_ttl_min),
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    refresh_payload = {
+        "sub": str(user_id),
+        "email": email,
+        "sid": session,
+        "typ": "refresh",
+        "jti": str(uuid.uuid4()),
+        "iat": now,
+        "exp": now + timedelta(days=settings.refresh_ttl_days),
+    }
+
+    access_token = jwt.encode(access_payload, settings.jwt_secret, algorithm=settings.jwt_alg)
+    refresh_token = jwt.encode(refresh_payload, settings.jwt_secret, algorithm=settings.jwt_alg)
+    return access_token, refresh_token, session
+
+
+def hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def extrair_payload(token: str, expected_type: str) -> dict:
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_alg])
+    except (jwt.PyJWTError, ValueError, TypeError):
+        audit_event("token_invalid", token_type=expected_type)
+        raise _credentials_exception("Token inválido ou expirado")
+
+    token_type = payload.get("typ")
+    if token_type != expected_type:
+        audit_event("token_invalid_type", expected_type=expected_type, provided_type=token_type)
+        raise _credentials_exception("Tipo de token inválido")
+
+    return payload
 
 
 def obter_usuario_logado(
@@ -43,18 +80,22 @@ def obter_usuario_logado(
 ) -> dict:
     from app.repositories import user_repo
 
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token inválido ou expirado",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    payload = extrair_payload(token, expected_type="access")
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload.get("sub"))
-    except (jwt.PyJWTError, ValueError, TypeError):
-        raise credentials_exception
+    except (ValueError, TypeError):
+        raise _credentials_exception("Token inválido")
 
     user = user_repo.buscar_usuario_por_id(conn, user_id)
     if not user:
-        raise credentials_exception
+        raise _credentials_exception("Token inválido")
     return user
+
+
+def _credentials_exception(detail: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
