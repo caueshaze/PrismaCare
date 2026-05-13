@@ -23,7 +23,7 @@ Copie `.env.example` e configure as variáveis obrigatórias:
 ## Como rodar o backend (passo a passo)
 1. Entrar na pasta do projeto:
 ```bash
-cd /home/caue/PrismaCare
+cd /home/usuario/PrismaCare
 ```
 
 2. Criar e ativar ambiente virtual:
