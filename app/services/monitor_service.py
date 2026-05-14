@@ -2,9 +2,10 @@ import logging
 from datetime import datetime, timezone
 
 from app.database import get_connection
+from app.core.constants import NotificacaoStatus
 from app.repositories.confirmacao_repo import (
     buscar_confirmacoes_atrasadas,
-    marcar_como_atrasado_notificado,
+    marcar_como_atrasado,
 )
 from app.repositories.notificacao_repo import criar_notificacao, notificacao_ja_existe
 
@@ -33,13 +34,13 @@ def varrer_e_notificar() -> dict:
                 id_confirmacao=confirmacao_id,
                 data_hora_envio=agora,
                 tipo_mensagem="SMS_ALERTA",
-                status_envio="pendente",
+                status_envio=NotificacaoStatus.AGUARDANDO,
             )
             notificacoes_criadas += 1
             confirmacoes_processadas.add(confirmacao_id)
 
         for confirmacao_id in confirmacoes_processadas:
-            marcar_como_atrasado_notificado(conn, confirmacao_id)
+            marcar_como_atrasado(conn, confirmacao_id)
 
         resultado = {
             "verificadas": len(alvos),
