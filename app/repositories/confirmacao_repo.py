@@ -1,5 +1,7 @@
 import sqlite3
 
+from app.core.constants import ConfirmacaoStatus
+
 
 def criar_confirmacao(conn: sqlite3.Connection, id_agendamento: int,
                       data_hora_prevista: str | None,
@@ -59,16 +61,17 @@ def buscar_confirmacoes_atrasadas(conn: sqlite3.Connection) -> list[dict]:
            JOIN contatos ct ON u.id = ct.id_usuario
            WHERE c.data_hora_confirmacao IS NULL
              AND c.data_hora_prevista < datetime('now', '-30 minutes')
-             AND c.status = 'pendente'
-             AND ct.ativo = 1"""
+             AND c.status = ?
+             AND ct.ativo = 1""",
+        (ConfirmacaoStatus.PENDENTE,),
     ).fetchall()
     return [dict(row) for row in rows]
 
 
-def marcar_como_atrasado_notificado(conn: sqlite3.Connection, confirmacao_id: int) -> None:
+def marcar_como_atrasado(conn: sqlite3.Connection, confirmacao_id: int) -> None:
     conn.execute(
-        "UPDATE confirmacoes SET status = 'atrasado_notificado' WHERE id = ?",
-        (confirmacao_id,),
+        "UPDATE confirmacoes SET status = ? WHERE id = ?",
+        (ConfirmacaoStatus.ATRASADO, confirmacao_id),
     )
     conn.commit()
 
