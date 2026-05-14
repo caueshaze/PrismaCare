@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -71,6 +71,6 @@ def confirmar_uso(
         conn,
         confirmacao_id=confirmacao_id,
         status=ConfirmacaoStatus.CONFIRMADO,
-        data_hora_confirmacao=datetime.now().isoformat(),
+        data_hora_confirmacao=datetime.now(timezone.utc).isoformat(),
     )
     return atualizada
