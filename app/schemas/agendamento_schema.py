@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from datetime import date
 from typing import Optional
 
@@ -28,3 +28,20 @@ class AgendamentoResponse(BaseModel):
     data_inicio: date
     data_fim: Optional[date] = None
     ativo: bool
+
+
+class AgendamentoUpdate(BaseModel):
+    id_medicamento: Optional[int] = None
+    horario: Optional[str] = None
+    frequencia: Optional[str] = None
+    data_inicio: Optional[date] = None
+    data_fim: Optional[date] = None
+    ativo: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def validar(self):
+        if all(v is None for v in self.model_dump().values()):
+            raise ValueError("Envie pelo menos um campo para atualizar")
+        if self.data_fim and self.data_inicio and self.data_fim < self.data_inicio:
+            raise ValueError("data_fim não pode ser anterior a data_inicio")
+        return self
