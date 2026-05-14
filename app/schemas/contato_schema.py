@@ -3,8 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, field_validator, model_validator
 
-_TELEFONE_REGEX = r"^\+?[\d\s\-\(\)]{8,20}$"
-
+TELEFONE_REGEX = r"^\+?[\d\s\-\(\)]{8,20}$"
 
 class ContatoCreate(BaseModel):
     nome: str
@@ -18,6 +17,13 @@ class ContatoCreate(BaseModel):
         if not v.strip():
             raise ValueError("Campo não pode ser vazio")
         return v
+
+    @field_validator("telefone")
+    @classmethod
+    def validar_telefone(cls, v):
+        if not re.match(TELEFONE_REGEX, v.strip()):
+            raise ValueError("Formato de telefone inválido")
+        return v.strip()
 
 
 class ContatoResponse(BaseModel):
@@ -52,6 +58,6 @@ class ContatoUpdate(BaseModel):
     def validar_telefone(cls, v):
         if v is None:
             return v
-        if not re.match(_TELEFONE_REGEX, v.strip()):
+        if not re.match(TELEFONE_REGEX, v.strip()):
             raise ValueError("Formato de telefone inválido")
         return v.strip()
