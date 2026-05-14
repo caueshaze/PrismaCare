@@ -68,7 +68,7 @@ def init_db():
                 id_agendamento INTEGER NOT NULL,
                 data_hora_prevista TEXT,
                 data_hora_confirmacao TEXT,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('PENDENTE','CONFIRMADO','ATRASADO','CANCELADO')),
                 FOREIGN KEY (id_agendamento) REFERENCES agendamentos(id)
             );
 
@@ -78,7 +78,7 @@ def init_db():
                 id_confirmacao INTEGER NOT NULL,
                 data_hora_envio TEXT,
                 tipo_mensagem TEXT NOT NULL,
-                status_envio TEXT NOT NULL,
+                status_envio TEXT NOT NULL CHECK(status_envio IN ('AGUARDANDO','ENVIADO','FALHA')),
                 FOREIGN KEY (id_contato) REFERENCES contatos(id),
                 FOREIGN KEY (id_confirmacao) REFERENCES confirmacoes(id)
             );
@@ -139,6 +139,17 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_confirmacoes_data_hora_prevista
             ON confirmacoes (data_hora_prevista);
+        """)
+        conn.commit()
+
+        conn.executescript("""
+            UPDATE confirmacoes SET status = 'PENDENTE'   WHERE status = 'pendente';
+            UPDATE confirmacoes SET status = 'CONFIRMADO' WHERE status = 'confirmado';
+            UPDATE confirmacoes SET status = 'ATRASADO'   WHERE status = 'atrasado_notificado';
+            UPDATE confirmacoes SET status = 'CANCELADO'  WHERE status = 'nao_confirmado';
+            UPDATE notificacoes SET status_envio = 'AGUARDANDO' WHERE status_envio = 'pendente';
+            UPDATE notificacoes SET status_envio = 'ENVIADO'    WHERE status_envio = 'enviado';
+            UPDATE notificacoes SET status_envio = 'FALHA'      WHERE status_envio = 'falhou';
         """)
         conn.commit()
     finally:
