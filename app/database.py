@@ -133,6 +133,12 @@ def init_db():
 
             CREATE UNIQUE INDEX IF NOT EXISTS idx_notificacoes_confirmacao_contato
             ON notificacoes (id_confirmacao, id_contato);
+
+            CREATE INDEX IF NOT EXISTS idx_medicamentos_id_usuario
+            ON medicamentos (id_usuario);
+
+            CREATE INDEX IF NOT EXISTS idx_confirmacoes_data_hora_prevista
+            ON confirmacoes (data_hora_prevista);
         """)
         conn.commit()
     finally:
