@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.database import get_db
 from app.repositories import agendamento_repo, medicamento_repo
-from app.schemas.agendamento_schema import AgendamentoCreate, AgendamentoResponse
+from app.schemas.agendamento_schema import AgendamentoCreate, AgendamentoResponse, AgendamentoUpdate
 from app.security import obter_usuario_logado
 
 router = APIRouter()
@@ -78,3 +78,34 @@ def deletar_agendamento(
             detail="Agendamento possui registros vinculados e não pode ser removido",
         )
     return {"message": "Agendamento deletado com sucesso"}
+
+
+@router.patch("/agendamentos/{agendamento_id}", response_model=AgendamentoResponse)
+def atualizar_agendamento(
+    agendamento_id: int,
+    dados: AgendamentoUpdate,
+    usuario: dict = Depends(obter_usuario_logado),
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    existente = agendamento_repo.buscar_agendamento_por_id(conn, agendamento_id)
+    if not existente:
+        raise HTTPException(status_code=404, detail="Agendamento não encontrado")
+    if not agendamento_repo.pertence_ao_usuario(conn, agendamento_id, usuario["id"]):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    if dados.id_medicamento is not None:
+        medicamento = medicamento_repo.buscar_medicamento_por_id(conn, dados.id_medicamento)
+        if not medicamento:
+            raise HTTPException(status_code=404, detail="Medicamento não encontrado")
+        if medicamento["id_usuario"] != usuario["id"]:
+            raise HTTPException(status_code=403, detail="Acesso negado")
+
+    return agendamento_repo.atualizar_agendamento(
+        conn, agendamento_id,
+        id_medicamento=dados.id_medicamento,
+        horario=dados.horario,
+        frequencia=dados.frequencia,
+        data_inicio=str(dados.data_inicio) if dados.data_inicio else None,
+        data_fim=str(dados.data_fim) if dados.data_fim else None,
+        ativo=dados.ativo,
+    )

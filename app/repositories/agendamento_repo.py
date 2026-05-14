@@ -51,6 +51,28 @@ def pertence_ao_usuario(conn: sqlite3.Connection, agendamento_id: int, id_usuari
     return row is not None
 
 
+def atualizar_agendamento(conn: sqlite3.Connection, agendamento_id: int,
+                          id_medicamento: int | None, horario: str | None,
+                          frequencia: str | None, data_inicio: str | None,
+                          data_fim: str | None, ativo: bool | None) -> dict | None:
+    campos = {
+        "id_medicamento": id_medicamento,
+        "horario": horario,
+        "frequencia": frequencia,
+        "data_inicio": data_inicio,
+        "data_fim": data_fim,
+        "ativo": int(ativo) if ativo is not None else None,
+    }
+    campos = {k: v for k, v in campos.items() if v is not None}
+    set_clause = ", ".join(f"{k} = ?" for k in campos)
+    conn.execute(
+        f"UPDATE agendamentos SET {set_clause} WHERE id = ?",
+        (*campos.values(), agendamento_id),
+    )
+    conn.commit()
+    return buscar_agendamento_por_id(conn, agendamento_id)
+
+
 def _converter(row: sqlite3.Row) -> dict:
     d = dict(row)
     d["ativo"] = bool(d["ativo"])
