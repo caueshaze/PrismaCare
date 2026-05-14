@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+
+# Banco local
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Frontend / Node
+node_modules/
+dist/
+.expo/
+
+# Ambiente e segredos
+.env
+*.env.local
+
+# Git
+.git/
+.gitignore
+
+# Misc
+.DS_Store
+*.log

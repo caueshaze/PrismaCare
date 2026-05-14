@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { colors } from '../theme/colors';
 import InputField from '../components/InputField';
 import PrimaryButton from '../components/PrimaryButton';
 import { RootStackParamList } from '../../App';
+import { AuthContext } from '../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export default function LoginScreen({ navigation }: Props) {
+  const { signIn } = useContext(AuthContext);
   const [contact, setContact] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,13 +41,16 @@ export default function LoginScreen({ navigation }: Props) {
     return Object.keys(next).length === 0;
   }
 
-  function handleLogin() {
+  async function handleLogin() {
     if (!validate()) return;
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await signIn(contact.trim(), password);
+    } catch (e: any) {
+      Alert.alert('Erro ao entrar', e.message);
+    } finally {
       setLoading(false);
-      Alert.alert('Acesso negado', 'E-mail/telefone ou senha incorretos. Tente novamente.');
-    }, 1500);
+    }
   }
 
   return (

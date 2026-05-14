@@ -1,7 +1,10 @@
 import sqlite3
 import os
 
-DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prismacare.db")
+DATABASE_PATH = os.getenv(
+    "DATABASE_PATH",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "prismacare.db"),
+)
 
 
 def get_connection() -> sqlite3.Connection:

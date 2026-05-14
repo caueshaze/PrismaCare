@@ -1,48 +1,122 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useContext, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Alert,
+} from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
+import InputField from '../components/InputField';
+import PrimaryButton from '../components/PrimaryButton';
 import { RootStackParamList } from '../../App';
+import { api } from '../services/api';
+import { AuthContext } from '../contexts/AuthContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Register'>;
 };
 
 export default function RegisterScreen({ navigation }: Props) {
+  const { signIn } = useContext(AuthContext);
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [senha, setSenha] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function validate() {
+    const next: Record<string, string> = {};
+    if (!nome.trim()) next.nome = 'Informe seu nome.';
+    if (!email.trim()) next.email = 'Informe seu e-mail.';
+    if (!telefone.trim()) next.telefone = 'Informe seu telefone.';
+    if (senha.length < 6) next.senha = 'Senha deve ter ao menos 6 caracteres.';
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
+  async function handleRegister() {
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      await api('/api/users', {
+        method: 'POST',
+        body: JSON.stringify({ nome: nome.trim(), email: email.trim(), telefone: telefone.trim(), senha }),
+      });
+      await signIn(email.trim(), senha);
+    } catch (e: any) {
+      Alert.alert('Erro ao cadastrar', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Criar Conta</Text>
-      <Text style={styles.subtitle}>Em breve — tela de cadastro em desenvolvimento.</Text>
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.back}>← Voltar ao login</Text>
-      </TouchableOpacity>
-    </View>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Text style={styles.subtitle}>Preencha os dados para criar sua conta</Text>
+
+        <InputField
+          label="Nome completo"
+          iconName="person-outline"
+          placeholder="Seu nome"
+          value={nome}
+          onChangeText={(t) => { setNome(t); setErrors((e) => ({ ...e, nome: '' })); }}
+          error={errors.nome}
+        />
+        <InputField
+          label="E-mail"
+          iconName="mail-outline"
+          placeholder="seuemail@exemplo.com"
+          value={email}
+          onChangeText={(t) => { setEmail(t); setErrors((e) => ({ ...e, email: '' })); }}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          error={errors.email}
+        />
+        <InputField
+          label="Telefone"
+          iconName="call-outline"
+          placeholder="(11) 99999-9999"
+          value={telefone}
+          onChangeText={(t) => { setTelefone(t); setErrors((e) => ({ ...e, telefone: '' })); }}
+          keyboardType="phone-pad"
+          error={errors.telefone}
+        />
+        <InputField
+          label="Senha"
+          iconName="lock-closed-outline"
+          placeholder="Mínimo 6 caracteres"
+          value={senha}
+          onChangeText={(t) => { setSenha(t); setErrors((e) => ({ ...e, senha: '' })); }}
+          isPassword
+          error={errors.senha}
+        />
+
+        <PrimaryButton
+          title="Criar conta"
+          onPress={handleRegister}
+          loading={loading}
+          iconName="checkmark"
+          style={styles.btn}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 12,
-  },
+  flex: { flex: 1, backgroundColor: colors.background },
+  scroll: { padding: 24, paddingTop: 16 },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
+    fontWeight: '500',
   },
-  back: {
-    fontSize: 15,
-    color: colors.primary,
-    fontWeight: '600',
-  },
+  btn: { marginTop: 8 },
 });
