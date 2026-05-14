@@ -1,7 +1,8 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 from datetime import datetime
+from typing import Literal
 
-STATUS_ENVIO_VALIDOS = {"enviado", "falhou", "pendente"}
+from app.core.constants import NotificacaoStatus
 
 
 class NotificacaoCreate(BaseModel):
@@ -9,14 +10,7 @@ class NotificacaoCreate(BaseModel):
     id_confirmacao: int
     data_hora_envio: datetime
     tipo_mensagem: str
-    status_envio: str = "pendente"
-
-    @field_validator("status_envio")
-    @classmethod
-    def status_valido(cls, v):
-        if v not in STATUS_ENVIO_VALIDOS:
-            raise ValueError(f"status_envio deve ser um de: {STATUS_ENVIO_VALIDOS}")
-        return v
+    status_envio: Literal["AGUARDANDO", "ENVIADO", "FALHA"] = NotificacaoStatus.AGUARDANDO
 
 
 class NotificacaoResponse(BaseModel):
@@ -25,4 +19,4 @@ class NotificacaoResponse(BaseModel):
     id_confirmacao: int
     data_hora_envio: datetime
     tipo_mensagem: str
-    status_envio: str
+    status_envio: Literal["AGUARDANDO", "ENVIADO", "FALHA"]
