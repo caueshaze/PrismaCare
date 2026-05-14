@@ -35,6 +35,28 @@ def deletar_contato(conn: sqlite3.Connection, contato_id: int) -> bool:
     return cursor.rowcount > 0
 
 
+def pertence_ao_usuario(conn: sqlite3.Connection, contato_id: int, id_usuario: int) -> bool:
+    row = conn.execute(
+        "SELECT id FROM contatos WHERE id = ? AND id_usuario = ?",
+        (contato_id, id_usuario),
+    ).fetchone()
+    return row is not None
+
+
+def atualizar_contato(conn: sqlite3.Connection, contato_id: int,
+                      nome: str | None, telefone: str | None,
+                      parentesco: str | None) -> dict | None:
+    campos = {"nome": nome, "telefone": telefone, "parentesco": parentesco}
+    campos = {k: v for k, v in campos.items() if v is not None}
+    set_clause = ", ".join(f"{k} = ?" for k in campos)
+    conn.execute(
+        f"UPDATE contatos SET {set_clause} WHERE id = ?",
+        (*campos.values(), contato_id),
+    )
+    conn.commit()
+    return buscar_contato_por_id(conn, contato_id)
+
+
 def _converter(row: sqlite3.Row) -> dict:
     d = dict(row)
     d["ativo"] = bool(d["ativo"])

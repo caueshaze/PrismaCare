@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.database import get_db
 from app.repositories import contato_repo
-from app.schemas.contato_schema import ContatoCreate, ContatoResponse
+from app.schemas.contato_schema import ContatoCreate, ContatoResponse, ContatoUpdate
 from app.security import obter_usuario_logado
 
 router = APIRouter()
@@ -69,3 +69,23 @@ def deletar_contato(
             detail="Contato possui registros vinculados e não pode ser removido",
         )
     return {"message": "Contato deletado com sucesso"}
+
+
+@router.patch("/contatos/{contato_id}", response_model=ContatoResponse)
+def atualizar_contato(
+    contato_id: int,
+    dados: ContatoUpdate,
+    usuario: dict = Depends(obter_usuario_logado),
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    existente = contato_repo.buscar_contato_por_id(conn, contato_id)
+    if not existente:
+        raise HTTPException(status_code=404, detail="Contato não encontrado")
+    if not contato_repo.pertence_ao_usuario(conn, contato_id, usuario["id"]):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    return contato_repo.atualizar_contato(
+        conn, contato_id,
+        nome=dados.nome,
+        telefone=dados.telefone,
+        parentesco=dados.parentesco,
+    )
