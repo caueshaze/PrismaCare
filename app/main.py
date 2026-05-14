@@ -11,6 +11,7 @@ from app.routes.user_route import router as user_router
 from app.routes.medicamento_route import router as medicamento_router
 from app.routes.contato_route import router as contato_router
 from app.routes.agendamento_route import router as agendamento_router
+from app.routes.dose_route import router as dose_router
 from app.routes.confirmacao_route import router as confirmacao_router
 from app.routes.notificacao_route import router as notificacao_router
 from app.routes.auth_route import router as auth_router
@@ -47,6 +48,7 @@ app.include_router(agendamento_router, prefix="/api", tags=["Agendamentos"])
 app.include_router(confirmacao_router, prefix="/api", tags=["Confirmações"])
 app.include_router(notificacao_router, prefix="/api", tags=["Notificações"])
 app.include_router(monitor_router, prefix="/api", tags=["Monitor"])
+app.include_router(dose_router, prefix="/api", tags=["Doses"])
 
 
 @app.get("/")
