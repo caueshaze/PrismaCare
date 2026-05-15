@@ -17,6 +17,7 @@ class Settings:
     rate_limit_login_per_min: int
     rate_limit_refresh_per_min: int
     rate_limit_api_per_min: int
+    disable_scheduler: bool
 
 
 def _load_dotenv_if_present() -> None:
@@ -90,6 +91,7 @@ def load_settings() -> Settings:
         rate_limit_login_per_min=_get_int("RATE_LIMIT_LOGIN_PER_MIN", 10),
         rate_limit_refresh_per_min=_get_int("RATE_LIMIT_REFRESH_PER_MIN", 20),
         rate_limit_api_per_min=_get_int("RATE_LIMIT_API_PER_MIN", 120),
+        disable_scheduler=_get_bool("DISABLE_SCHEDULER", False),
     )
 
 

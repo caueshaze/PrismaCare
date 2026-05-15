@@ -22,11 +22,13 @@ from app.services.monitor_service import varrer_e_notificar
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(varrer_e_notificar, "interval", minutes=5, id="monitor_varredura")
-    scheduler.start()
+    if not settings.disable_scheduler:
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(varrer_e_notificar, "interval", minutes=5, id="monitor_varredura")
+        scheduler.start()
     yield
-    scheduler.shutdown()
+    if not settings.disable_scheduler:
+        scheduler.shutdown()
 
 
 app = FastAPI(title="PrismaCare API", lifespan=lifespan)
