@@ -1,7 +1,8 @@
-import re 
+import re
 from pydantic import BaseModel, field_validator
 from datetime import date
 from typing import Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 TELEFONE_REGEX = r"^\+?[\d\s\-\(\)]{8,20}$"
 
@@ -48,3 +49,18 @@ class UserResponse(BaseModel):
     telefone: str
     email: str
     data_nascimento: Optional[date] = None
+    timezone: str = "America/Sao_Paulo"
+    timezone_confirmed: bool = False
+
+
+class TimezoneUpdate(BaseModel):
+    timezone: str
+
+    @field_validator("timezone")
+    @classmethod
+    def timezone_iana_valido(cls, v):
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, KeyError):
+            raise ValueError("Timezone inválido. Use um identificador IANA (ex: America/Sao_Paulo)")
+        return v

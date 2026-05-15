@@ -51,16 +51,18 @@ def atualizar_confirmacao(conn: sqlite3.Connection, confirmacao_id: int,
     return buscar_confirmacao_por_id(conn, confirmacao_id)
 
 
-def buscar_confirmacoes_atrasadas(conn: sqlite3.Connection) -> list[dict]:
+def buscar_candidatas_para_notificacao(conn: sqlite3.Connection) -> list[dict]:
     rows = conn.execute(
-        """SELECT c.id AS confirmacao_id, ct.id AS contato_id
+        """SELECT c.id AS confirmacao_id,
+                  ct.id AS contato_id,
+                  u.timezone AS usuario_timezone,
+                  c.data_hora_prevista
            FROM confirmacoes c
            JOIN agendamentos a ON c.id_agendamento = a.id
            JOIN medicamentos m ON a.id_medicamento = m.id
            JOIN users u ON m.id_usuario = u.id
            JOIN contatos ct ON u.id = ct.id_usuario
            WHERE c.data_hora_confirmacao IS NULL
-             AND c.data_hora_prevista < datetime('now', '-30 minutes')
              AND c.status = ?
              AND ct.ativo = 1""",
         (ConfirmacaoStatus.PENDENTE,),

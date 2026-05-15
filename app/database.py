@@ -6,9 +6,9 @@ DATABASE_PATH = os.getenv(
     os.path.join(os.path.dirname(os.path.dirname(__file__)), "prismacare.db"),
 )
 
-# Padrão de datas: todo o backend opera em UTC (datetime.now(timezone.utc)).
-# O banco SQLite também usa UTC via datetime('now').
-# O frontend é responsável por converter para o fuso local do usuário na exibição.
+# Padrão de datas: o backend usa o timezone IANA de cada usuário para calcular
+# datas e horários locais. Timestamps são armazenados como strings no formato
+# YYYY-MM-DD HH:MM:SS no horário local do usuário, sem offset.
 
 
 def get_connection() -> sqlite3.Connection:
@@ -36,7 +36,9 @@ def init_db():
                 telefone TEXT NOT NULL,
                 email TEXT NOT NULL UNIQUE,
                 senha TEXT NOT NULL,
-                data_nascimento TEXT
+                data_nascimento TEXT,
+                timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
+                timezone_confirmed INTEGER NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS medicamentos (
@@ -159,5 +161,16 @@ def init_db():
             UPDATE notificacoes SET status_envio = 'FALHA'      WHERE status_envio = 'falhou';
         """)
         conn.commit()
+
+        for sql in [
+            "ALTER TABLE users ADD COLUMN timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo'",
+            "ALTER TABLE users ADD COLUMN timezone_confirmed INTEGER NOT NULL DEFAULT 0",
+        ]:
+            try:
+                conn.execute(sql)
+                conn.commit()
+            except sqlite3.OperationalError as exc:
+                if "duplicate column name" not in str(exc).lower():
+                    raise
     finally:
         conn.close()
