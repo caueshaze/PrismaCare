@@ -1,10 +1,9 @@
-// Desenvolvimento local:
+// Configure EXPO_PUBLIC_API_BASE_URL no seu .env:
 //   Simulador iOS       → http://localhost:8000
 //   Emulador Android    → http://10.0.2.2:8000
 //   Dispositivo físico  → http://<IP_DA_MAQUINA>:8000
-// Produção (APK):
-//   const BASE = 'https://seudominio.com';
-const BASE = 'https://prismacare-api.caueti.com';
+//   Produção            → https://seudominio.com
+const BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
 let _token: string | null = null;
 

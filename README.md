@@ -1,120 +1,332 @@
-# PrismaCare
-O PrismaCare é uma plataforma voltada ao agendamento e acompanhamento de medicamentos, permitindo que usuários cadastrem remédios, horários de uso e recebam lembretes automáticos por meio de integração com a API do WhatsApp.
+<h1 align="center">
+  <br>
+  <img src="./assets/logo.png" alt="PrismaCare" width="120">
+  <br>
+  PrismaCare
+  <br>
+</h1>
 
-## Segurança (Backend)
-- Autenticação com JWT `access + refresh` com rotação/revogação de sessão.
-- Endpoints de autenticação:
-  - `POST /api/auth/login`
-  - `POST /api/auth/refresh`
-  - `POST /api/auth/logout`
-  - `POST /api/auth/logout-all`
+<p align="center">
+  Plataforma de gerenciamento de medicamentos para idosos — agendamentos, confirmações de dose e alertas automáticos para cuidadores.
+</p>
 
-## Monitor de Doses Atrasadas
-O sistema possui um motor de varredura automático que identifica confirmações com mais de 30 minutos de atraso e cria notificações para os contatos de segurança do usuário.
-
-- **Execução automática:** a cada 5 minutos via APScheduler (inicia junto com o servidor).
-- **Trigger manual:** `POST /api/monitor/varredura` (requer autenticação JWT).
-- **Anti-duplicata:** duas camadas — verificação na aplicação + `UNIQUE INDEX` no banco.
-- **Fluxo:** `confirmacao.status = 'pendente'` → notificação criada → `status` atualizado para `'atrasado_notificado'`.
-
-## Configuração de ambiente
-Copie `.env.example` e configure as variáveis obrigatórias:
-- `JWT_SECRET` (obrigatória)
-- `JWT_ALG`
-- `ACCESS_TTL_MIN`
-- `REFRESH_TTL_DAYS`
-- `CORS_ALLOW_ORIGINS`
-- `LOGIN_LOCKOUT_THRESHOLD`, `LOGIN_LOCKOUT_MINUTES`, `LOGIN_LOCKOUT_MAX_MINUTES`
-- `RATE_LIMIT_LOGIN_PER_MIN`, `RATE_LIMIT_REFRESH_PER_MIN`, `RATE_LIMIT_API_PER_MIN`
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.136-009688?style=flat-square&logo=fastapi&logoColor=white">
+  <img alt="React Native" src="https://img.shields.io/badge/React_Native-0.81-61DAFB?style=flat-square&logo=react&logoColor=black">
+  <img alt="Expo" src="https://img.shields.io/badge/Expo-54-000020?style=flat-square&logo=expo&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green?style=flat-square">
+</p>
 
 ---
 
-## Como rodar o backend — Linux
+## Sobre o projeto
 
-1. Entre na pasta do projeto:
-```bash
-cd ~/PrismaCare
+O PrismaCare é um sistema acadêmico voltado ao gerenciamento de medicamentos, pensado principalmente para idosos. O usuário cadastra seus remédios, define horários de uso e recebe lembretes automáticos. Se uma dose não for confirmada dentro do prazo, o sistema notifica os contatos de segurança (familiares ou cuidadores) via WhatsApp.
+
+**Stack principal:**
+
+| Camada | Tecnologia |
+|---|---|
+| API | FastAPI + Uvicorn |
+| Banco de dados | SQLite |
+| Autenticação | JWT (access + refresh com rotação) |
+| Agendamento | APScheduler |
+| Validação | Pydantic v2 |
+| Mobile | React Native + Expo |
+| Linguagem mobile | TypeScript (strict) |
+| Navegação | React Navigation v7 |
+| Infraestrutura | Docker + Nginx + SSL |
+
+---
+
+## Funcionalidades
+
+- Cadastro e autenticação de usuários com JWT
+- CRUD de medicamentos, contatos de segurança e agendamentos
+- Listagem automática de doses do dia com status (`PENDENTE`, `CONFIRMADO`, `ATRASADO`)
+- Confirmação de dose pelo app mobile
+- Monitor automático: doses não confirmadas em 30 min geram notificação para os contatos
+- Anti-duplicata de notificações por índice único + verificação na aplicação
+- Rate limiting por IP e por usuário (login, refresh e API geral)
+- Bloqueio progressivo de login após falhas consecutivas
+- Revogação de sessão individual ou total (`logout-all`)
+- Isolamento total de dados por usuário autenticado
+
+---
+
+## Estrutura do projeto
+
+```
+PrismaCare/
+│
+├── app/                          # Backend Python / FastAPI
+│   ├── main.py                   # Entry point, routers, lifespan, APScheduler
+│   ├── database.py               # Conexão SQLite e criação do schema
+│   ├── security.py               # JWT, bcrypt, dependency injection
+│   │
+│   ├── core/
+│   │   ├── config.py             # Settings carregadas do .env
+│   │   ├── constants.py          # Enums de status (PENDENTE, CONFIRMADO, etc.)
+│   │   ├── audit.py              # Log de eventos de autenticação
+│   │   ├── rate_limit.py         # Rate limiter por IP e usuário
+│   │   └── security_controls.py  # Enforcers e extração de IP
+│   │
+│   ├── middleware/
+│   │   └── security_middleware.py # Headers de segurança, rate limit, log de erros
+│   │
+│   ├── routes/                   # Endpoints da API (um arquivo por domínio)
+│   │   ├── auth_route.py         # /api/auth/*
+│   │   ├── user_route.py         # /api/users/*
+│   │   ├── medicamento_route.py  # /api/medicamentos/*
+│   │   ├── contato_route.py      # /api/contatos/*
+│   │   ├── agendamento_route.py  # /api/agendamentos/*
+│   │   ├── dose_route.py         # /api/doses/*
+│   │   ├── confirmacao_route.py  # /api/confirmacoes/*
+│   │   ├── notificacao_route.py  # /api/notificacoes/*
+│   │   └── monitor_route.py      # /api/monitor/*
+│   │
+│   ├── repositories/             # Acesso ao banco (queries SQLite)
+│   │   ├── auth_repo.py
+│   │   ├── user_repo.py
+│   │   ├── medicamento_repo.py
+│   │   ├── contato_repo.py
+│   │   ├── agendamento_repo.py
+│   │   ├── dose_repo.py
+│   │   ├── confirmacao_repo.py
+│   │   └── notificacao_repo.py
+│   │
+│   ├── schemas/                  # Validação com Pydantic v2
+│   │   ├── user_schema.py
+│   │   ├── medicamento_schema.py
+│   │   ├── contato_schema.py
+│   │   ├── agendamento_schema.py
+│   │   ├── dose_schema.py
+│   │   ├── confirmacao_schema.py
+│   │   └── notificacao_schema.py
+│   │
+│   └── services/
+│       └── monitor_service.py    # varrer_e_notificar() — varredura de doses atrasadas
+│
+├── src/                          # Frontend React Native / Expo
+│   ├── screens/
+│   │   ├── LoginScreen.tsx
+│   │   ├── RegisterScreen.tsx
+│   │   ├── ForgotPasswordScreen.tsx
+│   │   ├── HomeScreen.tsx
+│   │   ├── MedicamentosScreen.tsx
+│   │   ├── AgendamentosScreen.tsx
+│   │   ├── ContatosScreen.tsx
+│   │   └── DosesScreen.tsx
+│   │
+│   ├── components/
+│   │   ├── InputField.tsx        # Input reutilizável com ícone e validação
+│   │   └── PrimaryButton.tsx     # Botão com gradiente e estado de loading
+│   │
+│   ├── contexts/
+│   │   └── AuthContext.tsx       # Contexto de autenticação (signIn / signOut)
+│   │
+│   ├── services/
+│   │   └── api.ts                # Cliente HTTP com Bearer token
+│   │
+│   └── theme/
+│       └── colors.ts             # Paleta de cores do sistema
+│
+├── assets/                       # Ícones e imagens do app
+├── App.tsx                       # Navegação principal (Stack Navigator)
+├── index.ts                      # Entry point do Expo
+├── docker-compose.yml            # Backend + Nginx em containers
+├── Dockerfile                    # Imagem Python 3.13-slim
+├── nginx.conf                    # Reverse proxy com SSL (Let's Encrypt)
+├── requirements.txt              # Dependências Python
+├── package.json                  # Dependências Node / Expo
+├── tsconfig.json                 # TypeScript strict mode
+└── .env.example                  # Variáveis de ambiente (template)
 ```
 
-2. Crie e ative o ambiente virtual:
+---
+
+## Banco de dados
+
+O schema é criado automaticamente na primeira execução. Tabelas e relacionamentos:
+
+```
+users
+ └── medicamentos        (id_usuario → users.id)
+      └── agendamentos   (id_medicamento → medicamentos.id)
+           └── confirmacoes (id_agendamento → agendamentos.id)
+                └── notificacoes (id_confirmacao → confirmacoes.id)
+
+users
+ └── contatos            (id_usuario → users.id)
+      └── notificacoes   (id_contato → contatos.id)
+
+users
+ └── refresh_tokens      (user_id → users.id)
+ └── auth_events         (user_id → users.id)
+```
+
+---
+
+## Fluxo principal
+
+```
+Usuário cria conta
+       ↓
+   Faz login → recebe access token (15 min) + refresh token (14 dias)
+       ↓
+   Cadastra medicamento
+       ↓
+   Cria agendamento (horário + frequência + datas)
+       ↓
+   GET /api/doses/hoje → sistema gera confirmações PENDENTE automaticamente
+       ↓
+   Usuário confirma dose → status vira CONFIRMADO
+       ↓
+   Se não confirmada em 30 min → APScheduler marca como ATRASADO
+       ↓
+   Notificação gerada para contatos de segurança do usuário
+```
+
+---
+
+## Endpoints da API
+
+| Grupo | Método | Endpoint | Descrição |
+|---|---|---|---|
+| **Auth** | POST | `/api/auth/login` | Login com email e senha |
+| | POST | `/api/auth/refresh` | Renovar access token |
+| | POST | `/api/auth/logout` | Revogar sessão atual |
+| | POST | `/api/auth/logout-all` | Revogar todas as sessões |
+| **Usuários** | POST | `/api/users` | Criar conta (público) |
+| | GET | `/api/users/me` | Perfil do usuário autenticado |
+| | DELETE | `/api/users/{id}` | Deletar conta |
+| **Medicamentos** | GET/POST | `/api/medicamentos` | Listar / criar |
+| | GET/PUT/DELETE | `/api/medicamentos/{id}` | Buscar / atualizar / remover |
+| **Contatos** | GET/POST | `/api/contatos` | Listar / criar |
+| | GET/PATCH/DELETE | `/api/contatos/{id}` | Buscar / atualizar / remover |
+| **Agendamentos** | GET/POST | `/api/agendamentos` | Listar / criar |
+| | GET/PATCH/DELETE | `/api/agendamentos/{id}` | Buscar / atualizar / remover |
+| **Doses** | GET | `/api/doses/hoje` | Doses do dia com status |
+| **Confirmações** | GET/POST | `/api/confirmacoes` | Listar / criar |
+| | PUT | `/api/confirmacoes/{id}/confirmar` | Confirmar dose tomada |
+| **Notificações** | GET/POST | `/api/notificacoes` | Listar / criar |
+| **Monitor** | POST | `/api/monitor/varredura` | Disparar varredura manual |
+
+Documentação interativa disponível em `/docs` (Swagger UI) após subir o backend.
+
+---
+
+## Segurança
+
+- **JWT**: access token com TTL de 15 min + refresh token de 14 dias com rotação
+- **bcrypt**: hash de senha com custo padrão
+- **Refresh token**: armazenado como SHA-256 no banco; revogação individual e total
+- **Rate limiting**: 10 req/min no login, 20/min no refresh, 120/min na API geral
+- **Login lockout**: bloqueio progressivo após 5 falhas (configurável, máx. 60 min)
+- **Headers**: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cache-Control: no-store` em rotas de auth
+- **Isolamento**: todos os dados filtrados pelo `user_id` extraído do JWT
+- **Auditoria**: log de eventos de autenticação sem exposição de senhas ou tokens
+
+---
+
+## Variáveis de ambiente
+
+Copie `.env.example` para `.env` e configure:
+
+```env
+JWT_SECRET=           # obrigatório — gere com: openssl rand -base64 32
+JWT_ALG=HS256
+ACCESS_TTL_MIN=15
+REFRESH_TTL_DAYS=14
+CORS_ALLOW_ORIGINS=http://localhost:8081
+
+LOGIN_LOCKOUT_THRESHOLD=5
+LOGIN_LOCKOUT_MINUTES=15
+LOGIN_LOCKOUT_MAX_MINUTES=60
+
+RATE_LIMIT_LOGIN_PER_MIN=10
+RATE_LIMIT_REFRESH_PER_MIN=20
+RATE_LIMIT_API_PER_MIN=120
+```
+
+---
+
+## Como rodar o backend
+
+### Linux / macOS
+
 ```bash
+# 1. Crie e ative o ambiente virtual
 python3 -m venv .venv
 source .venv/bin/activate
-```
 
-3. Instale as dependências:
-```bash
+# 2. Instale as dependências
 pip install -r requirements.txt
-```
 
-4. Crie o arquivo de ambiente:
-```bash
+# 3. Configure o ambiente
 cp .env.example .env
-```
+# Edite .env e defina JWT_SECRET
 
-5. Edite `.env` e defina pelo menos `JWT_SECRET` com um valor forte e único.
-
-6. Suba a API (porta padrão 8000):
-```bash
-uvicorn app.main:app --reload
-```
-
-7. Ou em outra porta (exemplo 8010):
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8010
-```
-
-8. Acesse a documentação:
-- Swagger: `http://127.0.0.1:8000/docs`
-- OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
-
----
-
-## Como rodar o backend — Windows
-
-1. Abra o **PowerShell** e entre na pasta do projeto:
-```powershell
-cd $HOME\PrismaCare
-```
-
-2. Crie o ambiente virtual:
-```powershell
-python -m venv .venv
-```
-
-3. Ative o ambiente virtual:
-```powershell
-.venv\Scripts\Activate.ps1
-```
-> Se aparecer erro de política de execução, rode antes:
-> ```powershell
-> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-> ```
-
-4. Instale as dependências:
-```powershell
-pip install -r requirements.txt
-```
-
-5. Crie o arquivo de ambiente copiando o exemplo:
-```powershell
-copy .env.example .env
-```
-
-6. Abra `.env` em qualquer editor e defina pelo menos `JWT_SECRET` com um valor forte e único.
-
-7. Suba a API (porta padrão 8000):
-```powershell
+# 4. Suba a API
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-8. Acesse a documentação:
-- Swagger: `http://127.0.0.1:8000/docs`
-- OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
+### Windows (PowerShell)
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+> Se aparecer erro de política de execução no Windows:
+> `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+### Com Docker
+
+```bash
+docker compose up --build
+```
+
+O backend sobe na porta `8743` atrás do Nginx. Configure o SSL com Certbot conforme `nginx.conf`.
+
+**Swagger UI:** `http://localhost:8000/docs`
+
+---
+
+## Como rodar o frontend
+
+```bash
+# Instale as dependências
+npm install
+
+# Inicie o Expo
+npm start
+
+# Ou diretamente por plataforma
+npm run android
+npm run ios
+```
+
+Certifique-se de que o backend esteja acessível e defina `EXPO_PUBLIC_API_BASE_URL` no `.env` apontando para o endereço correto (veja `.env.example`).
 
 ---
 
 ## Observações
-- O banco SQLite (`prismacare.db`) é criado automaticamente na primeira execução.
-- O backend carrega `.env` automaticamente na inicialização.
-- Use os endpoints em `/api/auth/*` para autenticação.
+
+- O banco `prismacare.db` é criado automaticamente na primeira execução — não commitar.
+- O APScheduler inicia junto com o servidor e varre doses atrasadas a cada 5 minutos.
+- A integração real com WhatsApp ainda não está implementada; notificações são criadas com status `AGUARDANDO`.
+- Recuperação de senha está em desenvolvimento.
+
+---
+
+## Licença
+
+MIT © [Cauê Araujo](https://github.com/caueshaze)
