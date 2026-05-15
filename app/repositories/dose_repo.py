@@ -16,6 +16,13 @@ def _gerar_confirmacoes_do_dia(conn: sqlite3.Connection, id_usuario: int) -> Non
           AND a.ativo = 1
           AND date('now') >= date(a.data_inicio)
           AND (a.data_fim IS NULL OR date('now') <= date(a.data_fim))
+          AND (
+              lower(a.frequencia) = 'diario'
+              OR (
+                  lower(a.frequencia) = 'semanal'
+                  AND strftime('%w', date('now')) = strftime('%w', date(a.data_inicio))
+              )
+          )
           AND NOT EXISTS (
               SELECT 1 FROM confirmacoes c2
               WHERE c2.id_agendamento = a.id
