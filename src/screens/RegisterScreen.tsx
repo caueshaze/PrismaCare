@@ -5,6 +5,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
   Platform,
   Alert,
 } from 'react-native';
@@ -56,8 +58,13 @@ export default function RegisterScreen({ navigation }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.subtitle}>Preencha os dados para criar sua conta</Text>
 
         <InputField
@@ -105,6 +112,7 @@ export default function RegisterScreen({ navigation }: Props) {
           style={styles.btn}
         />
       </ScrollView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }

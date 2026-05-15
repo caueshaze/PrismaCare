@@ -15,11 +15,13 @@ import MedicamentosScreen from './src/screens/MedicamentosScreen';
 import AgendamentosScreen from './src/screens/AgendamentosScreen';
 import ContatosScreen from './src/screens/ContatosScreen';
 import DosesScreen from './src/screens/DosesScreen';
+import TimezoneWelcomeScreen from './src/screens/TimezoneWelcomeScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  TimezoneWelcome: undefined;
   Home: undefined;
   Medicamentos: undefined;
   Agendamentos: undefined;
@@ -38,7 +40,7 @@ const screenOptions = {
 };
 
 function Navigation() {
-  const { token, sessionExpiredMessage, consumeSessionExpiredMessage } = useContext(AuthContext);
+  const { token, timezoneConfirmed, sessionExpiredMessage, consumeSessionExpiredMessage } = useContext(AuthContext);
 
   useEffect(() => {
     if (!sessionExpiredMessage) return;
@@ -48,13 +50,13 @@ function Navigation() {
 
   return (
     <Stack.Navigator screenOptions={screenOptions}>
-      {token == null ? (
+      {token === null ? (
         <>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Criar Conta' }} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Redefinir Senha' }} />
         </>
-      ) : (
+      ) : timezoneConfirmed === true ? (
         <>
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Medicamentos" component={MedicamentosScreen} options={{ title: 'Medicamentos' }} />
@@ -62,6 +64,8 @@ function Navigation() {
           <Stack.Screen name="Contatos" component={ContatosScreen} options={{ title: 'Contatos' }} />
           <Stack.Screen name="Doses" component={DosesScreen} options={{ title: 'Doses de Hoje' }} />
         </>
+      ) : (
+        <Stack.Screen name="TimezoneWelcome" component={TimezoneWelcomeScreen} options={{ headerShown: false }} />
       )}
     </Stack.Navigator>
   );
