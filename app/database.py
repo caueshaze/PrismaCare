@@ -77,7 +77,7 @@ def init_db():
                 id_agendamento INTEGER NOT NULL,
                 data_hora_prevista TEXT,
                 data_hora_confirmacao TEXT,
-                status TEXT NOT NULL CHECK(status IN ('PENDENTE','CONFIRMADO','ATRASADO','CANCELADO')),
+                status TEXT NOT NULL CHECK(status IN ('PENDENTE','CONFIRMADO','NAO_CONFIRMADO','CANCELADO')),
                 FOREIGN KEY (id_agendamento) REFERENCES agendamentos(id)
             );
 
@@ -151,11 +151,14 @@ def init_db():
         """)
         conn.commit()
 
+        
         conn.executescript("""
-            UPDATE confirmacoes SET status = 'PENDENTE'   WHERE status = 'pendente';
-            UPDATE confirmacoes SET status = 'CONFIRMADO' WHERE status = 'confirmado';
-            UPDATE confirmacoes SET status = 'ATRASADO'   WHERE status = 'atrasado_notificado';
-            UPDATE confirmacoes SET status = 'CANCELADO'  WHERE status = 'nao_confirmado';
+            UPDATE confirmacoes SET status = 'PENDENTE'       WHERE status = 'pendente';
+            UPDATE confirmacoes SET status = 'CONFIRMADO'     WHERE status = 'confirmado';
+            UPDATE confirmacoes SET status = 'NAO_CONFIRMADO' WHERE status = 'atrasado_notificado';
+            UPDATE confirmacoes SET status = 'NAO_CONFIRMADO' WHERE status = 'ATRASADO';
+            UPDATE confirmacoes SET status = 'CANCELADO'      WHERE status = 'nao_confirmado';
+            UPDATE confirmacoes SET status = 'CANCELADO'      WHERE status = 'cancelado';
             UPDATE notificacoes SET status_envio = 'AGUARDANDO' WHERE status_envio = 'pendente';
             UPDATE notificacoes SET status_envio = 'ENVIADO'    WHERE status_envio = 'enviado';
             UPDATE notificacoes SET status_envio = 'FALHA'      WHERE status_envio = 'falhou';

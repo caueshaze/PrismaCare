@@ -1,72 +1,110 @@
-import logging
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from app.core.constants import StatusConfirmacao, StatusEnvio
 from app.database import get_connection
-from app.core.constants import NotificacaoStatus
-from app.repositories.confirmacao_repo import (
-    buscar_candidatas_para_notificacao,
-    marcar_como_atrasado,
-)
-from app.repositories.notificacao_repo import criar_notificacao, notificacao_ja_existe
 
-logger = logging.getLogger("prismacare.monitor")
+TOLERANCIA_MINUTOS = 30
 
 
 def varrer_e_notificar() -> dict:
+    """
+    Executada pelo APScheduler a cada 5 minutos e disponível para
+    disparo manual via POST /api/monitor/varredura.
+
+    Retorna um resumo com o número de confirmações atualizadas e
+    notificações criadas nesta execução.
+    """
     conn = get_connection()
+    confirmacoes_atualizadas = 0
+    notificacoes_criadas = 0
+
     try:
-        candidatos = buscar_candidatas_para_notificacao(conn)
+        limite = (datetime.now() - timedelta(minutes=TOLERANCIA_MINUTOS)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
-        alvos: list[tuple[dict, ZoneInfo]] = []
-        for c in candidatos:
-            raw_tz = c.get("usuario_timezone") or "America/Sao_Paulo"
-            try:
-                tz = ZoneInfo(raw_tz)
-            except ZoneInfoNotFoundError:
-                logger.warning(
-                    "Timezone inválido no banco para confirmação %s: %r — usando America/Sao_Paulo",
-                    c["confirmacao_id"], raw_tz,
-                )
-                tz = ZoneInfo("America/Sao_Paulo")
+        pendentes = conn.execute(
+            """
+            SELECT c.id, c.id_agendamento, c.data_hora_prevista
+            FROM confirmacoes c
+            WHERE c.status = ?
+              AND c.data_hora_prevista <= ?
+            """,
+            (StatusConfirmacao.PENDENTE, limite),
+        ).fetchall()
 
-            agora_local = datetime.now(tz).replace(tzinfo=None)
-            limite_local = agora_local - timedelta(minutes=30)
-            prevista = datetime.strptime(c["data_hora_prevista"], "%Y-%m-%d %H:%M:%S")
-            if prevista < limite_local:
-                alvos.append((c, tz))
+        for confirmacao in pendentes:
+            confirmacao_id = confirmacao["id"]
+            agendamento_id = confirmacao["id_agendamento"]
 
-        notificacoes_criadas = 0
-        confirmacoes_processadas: set[int] = set()
+            # Marca como NAO_CONFIRMADO
+            conn.execute(
+                "UPDATE confirmacoes SET status = ? WHERE id = ?",
+                (StatusConfirmacao.NAO_CONFIRMADO, confirmacao_id),
+            )
+            confirmacoes_atualizadas += 1
 
-        for alvo, tz in alvos:
-            confirmacao_id: int = alvo["confirmacao_id"]
-            contato_id: int = alvo["contato_id"]
+            # Busca o id_usuario via medicamento → agendamento
+            row = conn.execute(
+                """
+                SELECT m.id_usuario
+                FROM agendamentos a
+                JOIN medicamentos m ON m.id = a.id_medicamento
+                WHERE a.id = ?
+                """,
+                (agendamento_id,),
+            ).fetchone()
 
-            if notificacao_ja_existe(conn, confirmacao_id, contato_id):
+            if not row:
                 continue
 
-            agora_envio = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-            criar_notificacao(
-                conn,
-                id_contato=contato_id,
-                id_confirmacao=confirmacao_id,
-                data_hora_envio=agora_envio,
-                tipo_mensagem="SMS_ALERTA",
-                status_envio=NotificacaoStatus.AGUARDANDO,
-            )
-            notificacoes_criadas += 1
-            confirmacoes_processadas.add(confirmacao_id)
+            id_usuario = row["id_usuario"]
 
-        for confirmacao_id in confirmacoes_processadas:
-            marcar_como_atrasado(conn, confirmacao_id)
+            # Busca contatos ativos do usuário
+            contatos = conn.execute(
+                "SELECT id FROM contatos WHERE id_usuario = ? AND ativo = 1",
+                (id_usuario,),
+            ).fetchall()
 
-        resultado = {
-            "verificadas": len(candidatos),
-            "notificacoes_criadas": notificacoes_criadas,
-            "confirmacoes_atualizadas": len(confirmacoes_processadas),
-        }
-        logger.info("Varredura concluída: %s", resultado)
-        return resultado
+            for contato in contatos:
+                contato_id = contato["id"]
+
+                # Anti-duplicata: só cria se ainda não existe notificação
+                # para esse par (confirmacao, contato)
+                ja_existe = conn.execute(
+                    """
+                    SELECT 1 FROM notificacoes
+                    WHERE id_confirmacao = ? AND id_contato = ?
+                    """,
+                    (confirmacao_id, contato_id),
+                ).fetchone()
+
+                if ja_existe:
+                    continue
+
+                conn.execute(
+                    """
+                    INSERT INTO notificacoes
+                        (id_contato, id_confirmacao, data_hora_envio,
+                         tipo_mensagem, status_envio)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        contato_id,
+                        confirmacao_id,
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "dose_nao_confirmada",
+                        StatusEnvio.AGUARDANDO,
+                    ),
+                )
+                notificacoes_criadas += 1
+
+        conn.commit()
+
     finally:
         conn.close()
+
+    return {
+        "confirmacoes_atualizadas": confirmacoes_atualizadas,
+        "notificacoes_criadas": notificacoes_criadas,
+    }
