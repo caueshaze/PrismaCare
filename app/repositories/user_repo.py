@@ -2,14 +2,24 @@ import sqlite3
 
 
 def criar_usuario(conn: sqlite3.Connection, nome: str, telefone: str,
-                  email: str, senha: str, data_nascimento: str | None) -> dict:
+                  email: str, senha: str, data_nascimento: str | None,
+                  timezone: str = "America/Sao_Paulo") -> dict:
     cursor = conn.execute(
-        """INSERT INTO users (nome, telefone, email, senha, data_nascimento)
-           VALUES (?, ?, ?, ?, ?)""",
-        (nome, telefone, email, senha, data_nascimento),
+        """INSERT INTO users (nome, telefone, email, senha, data_nascimento, timezone)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (nome, telefone, email, senha, data_nascimento, timezone),
     )
     conn.commit()
     return buscar_usuario_por_id(conn, cursor.lastrowid)
+
+
+def atualizar_timezone(conn: sqlite3.Connection, user_id: int, timezone: str) -> dict | None:
+    conn.execute(
+        "UPDATE users SET timezone = ?, timezone_confirmed = 1 WHERE id = ?",
+        (timezone, user_id),
+    )
+    conn.commit()
+    return buscar_usuario_por_id(conn, user_id)
 
 
 def listar_usuarios(conn: sqlite3.Connection) -> list[dict]:

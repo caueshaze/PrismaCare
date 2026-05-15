@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.database import get_db
 from app.repositories import user_repo
-from app.schemas.user_schema import UserCreate, UserResponse
+from app.schemas.user_schema import UserCreate, UserResponse, TimezoneUpdate
 from app.security import hash_senha, obter_usuario_logado
 
 router = APIRouter()
@@ -56,6 +56,19 @@ def buscar_user(
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return user
+
+
+@router.patch("/users/me/timezone")
+def atualizar_timezone_usuario(
+    payload: TimezoneUpdate,
+    usuario: dict = Depends(obter_usuario_logado),
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    atualizado = user_repo.atualizar_timezone(conn, usuario["id"], payload.timezone)
+    return {
+        "timezone": atualizado["timezone"],
+        "timezone_confirmed": bool(atualizado["timezone_confirmed"]),
+    }
 
 
 @router.delete("/users/{user_id}")

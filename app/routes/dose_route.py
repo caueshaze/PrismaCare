@@ -1,4 +1,7 @@
 import sqlite3
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends
 from app.database import get_db
 from app.repositories import dose_repo
@@ -18,4 +21,6 @@ def listar_doses_hoje(
     usuario: dict = Depends(obter_usuario_logado),
     conn: sqlite3.Connection = Depends(get_db),
 ):
-    return dose_repo.listar_doses_hoje(conn, id_usuario=usuario["id"])
+    tz = ZoneInfo(usuario.get("timezone") or "America/Sao_Paulo")
+    hoje = datetime.now(tz).strftime("%Y-%m-%d")
+    return dose_repo.listar_doses_hoje(conn, id_usuario=usuario["id"], hoje=hoje)
