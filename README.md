@@ -214,7 +214,7 @@ Usuário cria conta
 | **Confirmações** | GET/POST | `/api/confirmacoes` | Listar / criar |
 | | PUT | `/api/confirmacoes/{id}/confirmar` | Confirmar dose tomada |
 | **Notificações** | GET/POST | `/api/notificacoes` | Listar / criar |
-| **Monitor** | POST | `/api/monitor/varredura` | Disparar varredura manual |
+| **Monitor** | POST | `/api/monitor/varredura` | Disparar varredura manual, controlada por `ENABLE_MANUAL_MONITOR_ENDPOINT` |
 
 Documentação interativa disponível em `/docs` (Swagger UI) após subir o backend.
 
@@ -243,6 +243,7 @@ JWT_ALG=HS256
 ACCESS_TTL_MIN=15
 REFRESH_TTL_DAYS=14
 CORS_ALLOW_ORIGINS=http://localhost:8081
+ENABLE_MANUAL_MONITOR_ENDPOINT=false
 
 LOGIN_LOCKOUT_THRESHOLD=5
 LOGIN_LOCKOUT_MINUTES=15
@@ -252,6 +253,8 @@ RATE_LIMIT_LOGIN_PER_MIN=10
 RATE_LIMIT_REFRESH_PER_MIN=20
 RATE_LIMIT_API_PER_MIN=120
 ```
+
+Em VPS/produção, mantenha `ENABLE_MANUAL_MONITOR_ENDPOINT=false`. Essa flag bloqueia apenas o disparo manual via `POST /api/monitor/varredura`; a execução automática do APScheduler continua funcionando normalmente.
 
 ---
 

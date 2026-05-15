@@ -10,6 +10,7 @@ class Settings:
     access_ttl_min: int
     refresh_ttl_days: int
     cors_allow_origins: list[str]
+    enable_manual_monitor_endpoint: bool
     login_lockout_threshold: int
     login_lockout_minutes: int
     login_lockout_max_minutes: int
@@ -53,6 +54,20 @@ def _get_int(name: str, default: int) -> int:
         raise RuntimeError(f"Invalid integer for {name}: {value}") from exc
 
 
+def _get_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+
+    raise RuntimeError(f"Invalid boolean for {name}: {value}")
+
+
 def load_settings() -> Settings:
     origins_raw = os.getenv(
         "CORS_ALLOW_ORIGINS",
@@ -68,6 +83,7 @@ def load_settings() -> Settings:
         access_ttl_min=_get_int("ACCESS_TTL_MIN", 15),
         refresh_ttl_days=_get_int("REFRESH_TTL_DAYS", 14),
         cors_allow_origins=origins,
+        enable_manual_monitor_endpoint=_get_bool("ENABLE_MANUAL_MONITOR_ENDPOINT", False),
         login_lockout_threshold=_get_int("LOGIN_LOCKOUT_THRESHOLD", 5),
         login_lockout_minutes=_get_int("LOGIN_LOCKOUT_MINUTES", 15),
         login_lockout_max_minutes=_get_int("LOGIN_LOCKOUT_MAX_MINUTES", 60),
