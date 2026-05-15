@@ -7,6 +7,8 @@ import {
   ScrollView,
   Platform,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
   Alert,
   Dimensions,
   Image,
@@ -70,8 +72,9 @@ export default function LoginScreen({ navigation }: Props) {
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
@@ -172,6 +175,7 @@ export default function LoginScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         </ScrollView>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </View>
   );

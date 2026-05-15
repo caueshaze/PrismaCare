@@ -128,6 +128,28 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
   return res.json();
 }
 
+export type UserProfile = {
+  id: number;
+  nome: string;
+  telefone: string;
+  email: string;
+  data_nascimento: string | null;
+  timezone: string;
+  timezone_confirmed: boolean;
+};
+
+export async function fetchMe(): Promise<UserProfile> {
+  return api<UserProfile>('/api/users/me');
+}
+
+export async function patchTimezone(timezone: string): Promise<{ timezone: string; timezone_confirmed: boolean }> {
+  return api('/api/users/me/timezone', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ timezone }),
+  });
+}
+
 export async function loginRequest(username: string, password: string) {
   const body = new URLSearchParams({ username, password, grant_type: 'password' });
   const res = await fetch(`${BASE}/api/auth/login`, {
