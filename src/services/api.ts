@@ -4,7 +4,7 @@
 //   Dispositivo físico  → http://<IP_DA_MAQUINA>:8000
 // Produção (APK):
 //   const BASE = 'https://seudominio.com';
-const BASE = 'http://localhost:8000';
+const BASE = 'https://prismacare-api.caueti.com';
 
 let _token: string | null = null;
 
