@@ -257,7 +257,7 @@ export default function AgendamentosScreen() {
                       value={dataInicio}
                       mode="date"
                       display="default"
-                      onChange={(_e, date) => {
+                      onChange={(_e: unknown, date?: Date) => {
                         setShowDatePicker(false);
                         if (date) setDataInicio(date);
                       }}

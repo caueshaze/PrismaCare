@@ -5,10 +5,92 @@
 //   Produção            → https://seudominio.com
 const BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
-let _token: string | null = null;
+export type SessionTokens = {
+  accessToken: string;
+  refreshToken: string;
+};
 
-export function setToken(t: string | null) {
-  _token = t;
+export type AuthResponse = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: {
+    id: number;
+    nome: string;
+    email: string;
+  };
+};
+
+type AuthHandlers = {
+  onSessionUpdate?: (tokens: SessionTokens) => void;
+  onSessionExpired?: () => void;
+};
+
+let _sessionTokens: SessionTokens | null = null;
+let _handlers: AuthHandlers = {};
+let _refreshPromise: Promise<boolean> | null = null;
+let _sessionExpiredTriggered = false;
+
+export function configureAuthHandlers(handlers: AuthHandlers) {
+  _handlers = handlers;
+}
+
+export function setSessionTokens(tokens: SessionTokens | null) {
+  _sessionTokens = tokens;
+  if (tokens) _sessionExpiredTriggered = false;
+}
+
+function readErrorDetail(body: unknown, status: number): string {
+  if (body && typeof body === 'object' && 'detail' in body) {
+    const detail = (body as { detail?: unknown }).detail;
+    if (typeof detail === 'string' && detail.trim()) return detail;
+  }
+  return `Erro ${status}`;
+}
+
+async function fetchJson(path: string, options: RequestInit): Promise<Response> {
+  return fetch(`${BASE}${path}`, options);
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  const refreshToken = _sessionTokens?.refreshToken;
+  if (!refreshToken) return false;
+
+  const res = await fetchJson('/api/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  if (!res.ok) return false;
+
+  const payload = (await res.json()) as AuthResponse;
+  if (!payload.access_token || !payload.refresh_token) return false;
+
+  const nextTokens: SessionTokens = {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token,
+  };
+  setSessionTokens(nextTokens);
+  _handlers.onSessionUpdate?.(nextTokens);
+  return true;
+}
+
+async function ensureRefreshed(): Promise<boolean> {
+  if (!_refreshPromise) {
+    _refreshPromise = refreshAccessToken().finally(() => {
+      _refreshPromise = null;
+    });
+  }
+  return _refreshPromise;
+}
+
+function triggerSessionExpired() {
+  if (_sessionExpiredTriggered) return;
+  _sessionExpiredTriggered = true;
+  setSessionTokens(null);
+  _handlers.onSessionExpired?.();
 }
 
 export async function api<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
@@ -16,12 +98,32 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
-  if (_token) headers['Authorization'] = `Bearer ${_token}`;
+  if (_sessionTokens?.accessToken) headers['Authorization'] = `Bearer ${_sessionTokens.accessToken}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  let res = await fetchJson(path, { ...options, headers });
+  if (res.status === 401) {
+    const refreshed = await ensureRefreshed();
+    if (!refreshed) {
+      triggerSessionExpired();
+      throw new Error('Sua sessão expirou. Entre novamente para continuar.');
+    }
+
+    const retryHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    };
+    if (_sessionTokens?.accessToken) retryHeaders['Authorization'] = `Bearer ${_sessionTokens.accessToken}`;
+    res = await fetchJson(path, { ...options, headers: retryHeaders });
+  }
+
+  if (res.status === 401) {
+    triggerSessionExpired();
+    throw new Error('Sua sessão expirou. Entre novamente para continuar.');
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail ?? `Erro ${res.status}`);
+    throw new Error(readErrorDetail(body, res.status));
   }
   return res.json();
 }
@@ -34,5 +136,5 @@ export async function loginRequest(username: string, password: string) {
     body: body.toString(),
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? 'Login falhou');
-  return res.json() as Promise<{ access_token: string }>;
+  return res.json() as Promise<AuthResponse>;
 }
