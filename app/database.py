@@ -6,6 +6,10 @@ DATABASE_PATH = os.getenv(
     os.path.join(os.path.dirname(os.path.dirname(__file__)), "prismacare.db"),
 )
 
+# Padrão de datas: todo o backend opera em UTC (datetime.now(timezone.utc)).
+# O banco SQLite também usa UTC via datetime('now').
+# O frontend é responsável por converter para o fuso local do usuário na exibição.
+
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DATABASE_PATH, check_same_thread=False)
