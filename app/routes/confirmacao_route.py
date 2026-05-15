@@ -21,8 +21,9 @@ def create_confirmacao(
     if not agendamento_repo.pertence_ao_usuario(conn, confirmacao.id_agendamento, usuario["id"]):
         raise HTTPException(status_code=403, detail="Acesso negado")
 
-    prevista = confirmacao.data_hora_prevista.isoformat() if confirmacao.data_hora_prevista else None
-    confirmada = confirmacao.data_hora_confirmacao.isoformat() if confirmacao.data_hora_confirmacao else None
+    fmt = "%Y-%m-%d %H:%M:%S"
+    prevista = confirmacao.data_hora_prevista.strftime(fmt) if confirmacao.data_hora_prevista else None
+    confirmada = confirmacao.data_hora_confirmacao.strftime(fmt) if confirmacao.data_hora_confirmacao else None
     nova = confirmacao_repo.criar_confirmacao(
         conn,
         id_agendamento=confirmacao.id_agendamento,
