@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from app.core.constants import StatusConfirmacao, StatusEnvio
 from app.database import get_connection
-from app.services.whatsapp_service import enviar_whatsapp_simulado
+from app.services.whatsapp_service import enviar_whatsapp
 
 TOLERANCIA_MINUTOS = 30
 
@@ -95,7 +95,7 @@ def varrer_e_notificar() -> dict:
                         contato_id,
                         confirmacao_id,
                         None,
-                        "WHATSAPP_SIMULADO",
+                        "WHATSAPP",
                         StatusEnvio.AGUARDANDO,
                     ),
                 )
@@ -120,7 +120,7 @@ def varrer_e_notificar() -> dict:
                         f"{dados['nome_medicamento']} ({dados['dosagem']}) "
                         f"previsto para {horario} não foi confirmado pelo usuário."
                     )
-                    resultado = enviar_whatsapp_simulado(dados["telefone"], mensagem)
+                    resultado = enviar_whatsapp(dados["telefone"], mensagem)
                     conn.execute(
                         """
                         UPDATE notificacoes
@@ -134,7 +134,8 @@ def varrer_e_notificar() -> dict:
                             confirmacao_id,
                         ),
                     )
-                    notificacoes_enviadas += 1
+                    if resultado["status_envio"] == StatusEnvio.ENVIADO:
+                        notificacoes_enviadas += 1
 
         conn.commit()
 

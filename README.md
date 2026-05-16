@@ -47,6 +47,7 @@ O PrismaCare é um sistema acadêmico voltado ao gerenciamento de medicamentos, 
 
 - Cadastro e autenticação de usuários com JWT
 - Login com Google em Android development build
+- Provider configurável de WhatsApp: simulado ou Evolution API
 - CRUD de medicamentos, contatos de segurança e agendamentos
 - Listagem automática de doses do dia com status (`PENDENTE`, `CONFIRMADO`, `ATRASADO`)
 - Confirmação de dose pelo app mobile
@@ -89,7 +90,8 @@ PrismaCare/
 │   │   ├── historico_route.py    # /api/doses/historico
 │   │   ├── confirmacao_route.py  # /api/confirmacoes/*
 │   │   ├── notificacao_route.py  # /api/notificacoes/*
-│   │   └── monitor_route.py      # /api/monitor/*
+│   │   ├── monitor_route.py      # /api/monitor/*
+│   │   └── whatsapp_route.py     # /api/whatsapp/*
 │   │
 │   ├── repositories/             # Acesso ao banco (queries SQLite)
 │   │   ├── auth_repo.py
@@ -113,7 +115,8 @@ PrismaCare/
 │   │   └── notificacao_schema.py
 │   │
 │   └── services/
-│       └── monitor_service.py    # varrer_e_notificar() — varredura de doses atrasadas
+│       ├── monitor_service.py    # varrer_e_notificar() — varredura de doses atrasadas
+│       └── whatsapp_service.py   # provider simulado / Evolution API
 │
 ├── src/                          # Frontend React Native / Expo
 │   ├── screens/
@@ -227,6 +230,8 @@ Usuário cria conta
 | | PUT | `/api/confirmacoes/{id}/confirmar` | Confirmar dose tomada |
 | **Notificações** | GET/POST | `/api/notificacoes` | Listar / criar |
 | **Monitor** | POST | `/api/monitor/varredura` | Disparar varredura manual, controlada por `ENABLE_MANUAL_MONITOR_ENDPOINT` |
+| **WhatsApp** | GET | `/api/whatsapp/status` | Status/configuração sanitizada da integração |
+| | POST | `/api/whatsapp/test-send` | Envio manual de teste, controlado por `ENABLE_WHATSAPP_TEST_ENDPOINT` |
 
 Documentação interativa disponível em `/docs` (Swagger UI) após subir o backend.
 
@@ -257,6 +262,11 @@ ACCESS_TTL_MIN=15
 REFRESH_TTL_DAYS=14
 CORS_ALLOW_ORIGINS=http://localhost:8081
 ENABLE_MANUAL_MONITOR_ENDPOINT=false
+WHATSAPP_PROVIDER=simulation
+EVOLUTION_API_URL=http://127.0.0.1:8080
+EVOLUTION_API_KEY=
+EVOLUTION_INSTANCE_NAME=prismacare
+ENABLE_WHATSAPP_TEST_ENDPOINT=false
 
 LOGIN_LOCKOUT_THRESHOLD=5
 LOGIN_LOCKOUT_MINUTES=15
@@ -276,6 +286,13 @@ Em VPS/produção, mantenha `ENABLE_MANUAL_MONITOR_ENDPOINT=false`. Essa flag bl
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` é usado pelo app como `webClientId`.
 - Além do Web Client ID, o Google Cloud também precisa de um OAuth client Android com package `com.caueshaze.prismacare` e os SHA-1/SHA-256 do development build.
 - Google Sign-In não funciona no Expo Go. A validação deve ser feita em Android development build.
+
+### WhatsApp Provider
+
+- `WHATSAPP_PROVIDER=simulation` mantém o envio simulado para desenvolvimento e testes.
+- `WHATSAPP_PROVIDER=evolution` ativa o envio real via Evolution API.
+- `GET /api/whatsapp/status` exige autenticação e nunca expõe `EVOLUTION_API_KEY`.
+- `POST /api/whatsapp/test-send` exige autenticação e só funciona com `ENABLE_WHATSAPP_TEST_ENDPOINT=true`.
 
 ---
 

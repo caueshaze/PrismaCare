@@ -8,10 +8,15 @@ class Settings:
     jwt_secret: str
     jwt_alg: str
     google_web_client_id: str
+    whatsapp_provider: str
+    evolution_api_url: str | None
+    evolution_api_key: str | None
+    evolution_instance_name: str | None
     access_ttl_min: int
     refresh_ttl_days: int
     cors_allow_origins: list[str]
     enable_manual_monitor_endpoint: bool
+    enable_whatsapp_test_endpoint: bool
     login_lockout_threshold: int
     login_lockout_minutes: int
     login_lockout_max_minutes: int
@@ -70,6 +75,14 @@ def _get_bool(name: str, default: bool) -> bool:
     raise RuntimeError(f"Invalid boolean for {name}: {value}")
 
 
+def _get_optional(name: str) -> str | None:
+    value = os.getenv(name)
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
 def load_settings() -> Settings:
     origins_raw = os.getenv(
         "CORS_ALLOW_ORIGINS",
@@ -79,14 +92,23 @@ def load_settings() -> Settings:
     if not origins:
         raise RuntimeError("CORS_ALLOW_ORIGINS must define at least one origin")
 
+    whatsapp_provider = os.getenv("WHATSAPP_PROVIDER", "simulation").strip().lower()
+    if whatsapp_provider not in {"simulation", "evolution"}:
+        raise RuntimeError("WHATSAPP_PROVIDER must be one of: simulation, evolution")
+
     return Settings(
         jwt_secret=_get_required("JWT_SECRET"),
         jwt_alg=os.getenv("JWT_ALG", "HS256"),
         google_web_client_id=_get_required("GOOGLE_WEB_CLIENT_ID"),
+        whatsapp_provider=whatsapp_provider,
+        evolution_api_url=_get_optional("EVOLUTION_API_URL"),
+        evolution_api_key=_get_optional("EVOLUTION_API_KEY"),
+        evolution_instance_name=_get_optional("EVOLUTION_INSTANCE_NAME"),
         access_ttl_min=_get_int("ACCESS_TTL_MIN", 15),
         refresh_ttl_days=_get_int("REFRESH_TTL_DAYS", 14),
         cors_allow_origins=origins,
         enable_manual_monitor_endpoint=_get_bool("ENABLE_MANUAL_MONITOR_ENDPOINT", False),
+        enable_whatsapp_test_endpoint=_get_bool("ENABLE_WHATSAPP_TEST_ENDPOINT", False),
         login_lockout_threshold=_get_int("LOGIN_LOCKOUT_THRESHOLD", 5),
         login_lockout_minutes=_get_int("LOGIN_LOCKOUT_MINUTES", 15),
         login_lockout_max_minutes=_get_int("LOGIN_LOCKOUT_MAX_MINUTES", 60),
