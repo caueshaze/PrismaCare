@@ -11,8 +11,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { api } from '../services/api';
+import { DoseReminderInput, syncDoseReminders } from '../services/notificationService';
 
-type Dose = {
+type Dose = DoseReminderInput & {
   confirmacao_id: number;
   horario_previsto: string;
   horario_confirmacao: string | null;
@@ -37,12 +38,13 @@ export default function DosesScreen() {
     try {
       const data = await api<Dose[]>('/api/doses/hoje');
       setDoses(data);
+      await syncDoseReminders(data);
     } catch (e: any) {
       Alert.alert('Erro', e.message);
     } finally {
-      loading && setLoading(false);
+      setLoading(false);
     }
-  }, [loading]);
+  }, []);
 
   useEffect(() => { buscar(); }, [buscar]);
 

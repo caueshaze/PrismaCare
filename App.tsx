@@ -18,6 +18,7 @@ import AgendamentosScreen from './src/screens/AgendamentosScreen';
 import ContatosScreen from './src/screens/ContatosScreen';
 import DosesScreen from './src/screens/DosesScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import { configureDoseNotifications } from './src/services/notificationService';
 
 export type RootStackParamList = {
   AuthIntro: undefined;
@@ -78,6 +79,10 @@ function Navigation() {
 }
 
 export default function App() {
+  useEffect(() => {
+    configureDoseNotifications();
+  }, []);
+
   return (
     <AuthProvider>
       <NavigationContainer>
