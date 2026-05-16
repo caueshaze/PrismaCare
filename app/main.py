@@ -16,6 +16,7 @@ from app.routes.confirmacao_route import router as confirmacao_router
 from app.routes.notificacao_route import router as notificacao_router
 from app.routes.auth_route import router as auth_router
 from app.routes.monitor_route import router as monitor_router
+from app.routes.historico_route import router as historico_router
 from app.services.monitor_service import varrer_e_notificar
 
 
@@ -51,6 +52,7 @@ app.include_router(confirmacao_router, prefix="/api", tags=["Confirmações"])
 app.include_router(notificacao_router, prefix="/api", tags=["Notificações"])
 app.include_router(monitor_router, prefix="/api", tags=["Monitor"])
 app.include_router(dose_router, prefix="/api", tags=["Doses"])
+app.include_router(historico_router, prefix="/api", tags=["Doses"])
 
 
 @app.get("/")
