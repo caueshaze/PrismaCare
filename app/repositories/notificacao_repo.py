@@ -4,14 +4,17 @@ import sqlite3
 def criar_notificacao(conn: sqlite3.Connection, id_contato: int,
                       id_confirmacao: int, data_hora_envio: str | None,
                       tipo_mensagem: str, status_envio: str) -> dict:
-    cursor = conn.execute(
-        """INSERT INTO notificacoes
-           (id_contato, id_confirmacao, data_hora_envio, tipo_mensagem, status_envio)
-           VALUES (?, ?, ?, ?, ?)""",
-        (id_contato, id_confirmacao, data_hora_envio, tipo_mensagem, status_envio),
-    )
-    conn.commit()
-    return buscar_notificacao_por_id(conn, cursor.lastrowid)
+    try:
+        cursor = conn.execute(
+            """INSERT INTO notificacoes
+               (id_contato, id_confirmacao, data_hora_envio, tipo_mensagem, status_envio)
+               VALUES (?, ?, ?, ?, ?)""",
+            (id_contato, id_confirmacao, data_hora_envio, tipo_mensagem, status_envio),
+        )
+        conn.commit()
+        return buscar_notificacao_por_id(conn, cursor.lastrowid)
+    except sqlite3.IntegrityError as e:
+        raise ValueError(f"Erro de integridade: {e}") from e
 
 
 def listar_notificacoes(conn: sqlite3.Connection, id_usuario: int | None = None) -> list[dict]:
