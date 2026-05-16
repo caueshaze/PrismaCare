@@ -71,6 +71,25 @@ def test_nao_duplica_notificacao(client, headers_a):
     assert len(notificacoes) == 1
 
 
+def test_dose_confirmada_nao_envia_alerta_ao_contato(client, headers_a):
+    from app.services.monitor_service import varrer_e_notificar
+
+    _med_id, _contato_id, agend_id = _criar_stack(client, headers_a)
+    confirmacao_id = _criar_confirmacao_vencida(client, headers_a, agend_id)
+
+    confirmada = client.put(f"/api/confirmacoes/{confirmacao_id}/confirmar", headers=headers_a)
+    assert confirmada.status_code == 200
+    assert confirmada.json()["status"] == "CONFIRMADO"
+
+    resultado = varrer_e_notificar()
+    assert resultado["confirmacoes_atualizadas"] == 0
+    assert resultado["notificacoes_criadas"] == 0
+    assert resultado["notificacoes_enviadas"] == 0
+
+    notificacoes = client.get("/api/notificacoes", headers=headers_a).json()
+    assert notificacoes == []
+
+
 # Cenário 3 — múltiplos contatos recebem notificações individuais
 def test_multiplos_contatos(client, headers_a):
     from app.services.monitor_service import varrer_e_notificar
