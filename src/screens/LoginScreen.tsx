@@ -28,6 +28,10 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
 };
 
+function isPhoneCandidate(value: string): boolean {
+  return value.replace(/\D/g, '').length >= 8;
+}
+
 export default function LoginScreen({ navigation }: Props) {
   const { signIn } = useContext(AuthContext);
   const [contact, setContact] = useState('');
@@ -37,8 +41,11 @@ export default function LoginScreen({ navigation }: Props) {
 
   function validate() {
     const next: typeof errors = {};
-    if (!contact.trim()) next.contact = 'Informe seu e-mail ou telefone.';
+    if (!contact.trim()) next.contact = 'Informe seu número ou e-mail.';
     if (!password) next.password = 'Informe sua senha.';
+    else if (isPhoneCandidate(contact)) {
+      next.contact = 'Login com número será habilitado em breve. Por enquanto, entre com seu e-mail e senha.';
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -99,20 +106,20 @@ export default function LoginScreen({ navigation }: Props) {
           {/* Glass card */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Bem-vindo de volta</Text>
-              <Text style={styles.cardSubtitle}>Acesse sua conta para continuar</Text>
+              <Text style={styles.cardTitle}>Inicie com seu número ou e-mail</Text>
+              <Text style={styles.cardSubtitle}>Use seu e-mail para entrar hoje. O acesso por número será liberado em breve.</Text>
             </View>
 
             <InputField
-              label="E-mail ou Telefone"
-              iconName="mail-outline"
-              placeholder="seuemail@exemplo.com"
+              label="Número ou e-mail"
+              iconName="person-outline"
+              placeholder="Seu número ou e-mail"
               value={contact}
               onChangeText={(t) => {
                 setContact(t);
                 if (errors.contact) setErrors((e) => ({ ...e, contact: undefined }));
               }}
-              keyboardType="email-address"
+              keyboardType="default"
               autoCapitalize="none"
               error={errors.contact}
             />
@@ -155,15 +162,9 @@ export default function LoginScreen({ navigation }: Props) {
 
             {/* Social buttons placeholder */}
             <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
+              <View style={styles.socialBtn}>
                 <Ionicons name="logo-google" size={20} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                <Ionicons name="logo-apple" size={22} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.7}>
-                <Ionicons name="logo-whatsapp" size={20} color={colors.primary} />
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
 
