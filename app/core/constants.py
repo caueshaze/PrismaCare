@@ -1,14 +1,14 @@
-from enum import StrEnum
-
-
-class ConfirmacaoStatus(StrEnum):
-    PENDENTE   = "PENDENTE"
+ from enum import Enum
+ 
+ 
+class StatusConfirmacao(str, Enum):
+    PENDENTE = "PENDENTE"
     CONFIRMADO = "CONFIRMADO"
-    ATRASADO   = "ATRASADO"
-    CANCELADO  = "CANCELADO"
-
-
-class NotificacaoStatus(StrEnum):
+    NAO_CONFIRMADO = "NAO_CONFIRMADO"
+    CANCELADO = "CANCELADO"
+ 
+ 
+class StatusEnvio(str, Enum):
     AGUARDANDO = "AGUARDANDO"
-    ENVIADO    = "ENVIADO"
-    FALHA      = "FALHA"
+    ENVIADO = "ENVIADO"
+    FALHA = "FALHA"

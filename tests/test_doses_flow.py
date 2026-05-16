@@ -72,7 +72,7 @@ def test_agendamento_semanal_dia_errado(client, headers_a):
     assert len(doses) == 0
 
 
-# ---------- Dose vencida gera notificação ----------
+# ---------- Dose vencida → NAO_CONFIRMADO + notificação ----------
 
 def test_dose_vencida_gera_notificacao(client, headers_a):
     from app.services.monitor_service import varrer_e_notificar
@@ -94,5 +94,51 @@ def test_dose_vencida_gera_notificacao(client, headers_a):
     assert resultado["notificacoes_criadas"] >= 1
     assert resultado["confirmacoes_atualizadas"] >= 1
 
+    # Status deve ser NAO_CONFIRMADO, nunca mais ATRASADO
     r2 = client.get(f"/api/confirmacoes/{confirmacao_id}", headers=headers_a)
-    assert r2.json()["status"] == "ATRASADO"
+    assert r2.json()["status"] == "NAO_CONFIRMADO"
+
+
+def test_dose_vencida_nao_fica_atrasado(client, headers_a):
+    """Garante explicitamente que ATRASADO não aparece mais após varredura."""
+    from app.services.monitor_service import varrer_e_notificar
+
+    _med_id, _contato_id, agend_id = _criar_stack(client, headers_a)
+
+    prevista = (datetime.now(FUSO) - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+    payload = {
+        "id_agendamento": agend_id,
+        "data_hora_prevista": prevista,
+        "status": "PENDENTE",
+    }
+    r = client.post("/api/confirmacoes", json=payload, headers=headers_a)
+    confirmacao_id = r.json()["id"]
+
+    varrer_e_notificar()
+
+    r2 = client.get(f"/api/confirmacoes/{confirmacao_id}", headers=headers_a)
+    status = r2.json()["status"]
+    assert status != "ATRASADO", f"Status não deve ser ATRASADO, mas foi: {status}"
+    assert status == "NAO_CONFIRMADO"
+
+
+def test_dose_pendente_dentro_prazo_nao_alterada(client, headers_a):
+    """Doses dentro do prazo de tolerância não devem ser tocadas pela varredura."""
+    from app.services.monitor_service import varrer_e_notificar
+
+    _med_id, _contato_id, agend_id = _criar_stack(client, headers_a)
+
+    # Horário futuro — dentro do prazo, não deve ser marcada
+    prevista = (datetime.now(FUSO) + timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M:%S")
+    payload = {
+        "id_agendamento": agend_id,
+        "data_hora_prevista": prevista,
+        "status": "PENDENTE",
+    }
+    r = client.post("/api/confirmacoes", json=payload, headers=headers_a)
+    confirmacao_id = r.json()["id"]
+
+    varrer_e_notificar()
+
+    r2 = client.get(f"/api/confirmacoes/{confirmacao_id}", headers=headers_a)
+    assert r2.json()["status"] == "PENDENTE"

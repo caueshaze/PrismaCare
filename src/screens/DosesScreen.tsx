@@ -16,15 +16,16 @@ type Dose = {
   confirmacao_id: number;
   horario_previsto: string;
   horario_confirmacao: string | null;
-  status: 'PENDENTE' | 'CONFIRMADO' | 'ATRASADO' | 'CANCELADO';
+  status: 'PENDENTE' | 'CONFIRMADO' | 'ATRASADO' | 'CANCELADO' | 'NAO_CONFIRMADO';
   medicamento: { nome: string; dosagem: string; observacao?: string };
 };
 
 const STATUS_CONFIG = {
-  PENDENTE:   { label: 'Pendente',   color: '#F59E0B', bg: '#FEF3C7' },
-  CONFIRMADO: { label: 'Confirmado', color: '#10B981', bg: '#D1FAE5' },
-  ATRASADO:   { label: 'Atrasado',   color: '#EF4444', bg: '#FEE2E2' },
-  CANCELADO:  { label: 'Cancelado',  color: '#6B7280', bg: '#F3F4F6' },
+  PENDENTE:       { label: 'Pendente',       color: '#F59E0B', bg: '#FEF3C7' },
+  CONFIRMADO:     { label: 'Confirmado',     color: '#10B981', bg: '#D1FAE5' },
+  ATRASADO:       { label: 'Atrasado',       color: '#EF4444', bg: '#FEE2E2' },
+  CANCELADO:      { label: 'Cancelado',      color: '#6B7280', bg: '#F3F4F6' },
+  NAO_CONFIRMADO: { label: 'Não Confirmado', color: '#7F1D1D', bg: '#FEE2E2' }, // Tom vermelho escuro/vencido
 };
 
 export default function DosesScreen() {
@@ -39,9 +40,9 @@ export default function DosesScreen() {
     } catch (e: any) {
       Alert.alert('Erro', e.message);
     } finally {
-      setLoading(false);
+      loading && setLoading(false);
     }
-  }, []);
+  }, [loading]);
 
   useEffect(() => { buscar(); }, [buscar]);
 
