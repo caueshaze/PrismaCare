@@ -15,7 +15,7 @@ from app.core.security_controls import (
 )
 from app.database import get_db
 from app.repositories import auth_repo, user_repo
-from app.security import extrair_payload, gerar_par_tokens, hash_token, verificar_senha
+from app.security import extrair_payload, gerar_par_tokens, hash_senha, hash_token, verificar_senha
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -27,6 +27,15 @@ class RefreshRequest(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: str | None = None
+
+
+class LookupEmailRequest(BaseModel):
+    email: str
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
 
 
 def _auth_response(user: dict, access_token: str, refresh_token: str) -> dict:
@@ -41,6 +50,13 @@ def _auth_response(user: dict, access_token: str, refresh_token: str) -> dict:
             "email": user["email"],
         },
     }
+
+
+def _normalize_email(email: str) -> str:
+    value = email.lower().strip()
+    if "@" not in value or "." not in value:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="E-mail inválido")
+    return value
 
 
 def process_login(
@@ -120,6 +136,39 @@ def process_login(
     )
     audit_event("login_success", user_id=user["id"], ip=ip)
     return _auth_response(user, access_token, refresh_token)
+
+
+@router.post("/lookup-email")
+def lookup_email(payload: LookupEmailRequest, conn: sqlite3.Connection = Depends(get_db)):
+    email = _normalize_email(payload.email)
+    return {"exists": user_repo.buscar_usuario_por_email(conn, email) is not None}
+
+
+@router.post("/register", status_code=201)
+def register(payload: RegisterRequest, conn: sqlite3.Connection = Depends(get_db)):
+    email = _normalize_email(payload.email)
+    if len(payload.password) < 6:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Senha deve ter pelo menos 6 caracteres")
+
+    existente = user_repo.buscar_usuario_por_email(conn, email)
+    if existente:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="E-mail já cadastrado")
+
+    novo_user = user_repo.criar_usuario(
+        conn,
+        nome=None,
+        telefone=None,
+        email=email,
+        senha=hash_senha(payload.password),
+        data_nascimento=None,
+    )
+    return {
+        "id": novo_user["id"],
+        "email": novo_user["email"],
+        "nome": novo_user["nome"],
+        "telefone": novo_user["telefone"],
+        "timezone_confirmed": bool(novo_user["timezone_confirmed"]),
+    }
 
 
 @router.post("/login")

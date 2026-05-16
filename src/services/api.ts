@@ -17,7 +17,7 @@ export type AuthResponse = {
   expires_in: number;
   user: {
     id: number;
-    nome: string;
+    nome: string | null;
     email: string;
   };
 };
@@ -130,8 +130,8 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
 
 export type UserProfile = {
   id: number;
-  nome: string;
-  telefone: string;
+  nome: string | null;
+  telefone: string | null;
   email: string;
   data_nascimento: string | null;
   timezone: string;
@@ -147,6 +147,27 @@ export async function patchTimezone(timezone: string): Promise<{ timezone: strin
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ timezone }),
+  });
+}
+
+export async function patchProfileName(name: string): Promise<UserProfile> {
+  return api<UserProfile>('/api/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function lookupEmail(email: string): Promise<{ exists: boolean }> {
+  return api<{ exists: boolean }>('/api/auth/lookup-email', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function registerRequest(email: string, password: string): Promise<void> {
+  await api('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
   });
 }
 

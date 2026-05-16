@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.database import get_db
 from app.repositories import user_repo
-from app.schemas.user_schema import UserCreate, UserResponse, TimezoneUpdate
+from app.schemas.user_schema import UserCreate, UserProfileUpdate, UserResponse, TimezoneUpdate
 from app.security import hash_senha, obter_usuario_logado
 
 router = APIRouter()
@@ -31,6 +31,15 @@ def create_user(user: UserCreate, conn: sqlite3.Connection = Depends(get_db)):
 @router.get("/users/me", response_model=UserResponse)
 def meu_perfil(usuario: dict = Depends(obter_usuario_logado)):
     return usuario
+
+
+@router.patch("/users/me", response_model=UserResponse)
+def atualizar_meu_perfil(
+    payload: UserProfileUpdate,
+    usuario: dict = Depends(obter_usuario_logado),
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    return user_repo.atualizar_nome(conn, usuario["id"], payload.name)
 
 
 @router.get("/users", response_model=list[UserResponse])

@@ -8,8 +8,8 @@ TELEFONE_REGEX = r"^\+?[\d\s\-\(\)]{8,20}$"
 
 
 class UserCreate(BaseModel):
-    nome: str
-    telefone: str
+    nome: Optional[str] = None
+    telefone: Optional[str] = None
     email: str
     senha: str
     data_nascimento: Optional[date] = None
@@ -17,7 +17,7 @@ class UserCreate(BaseModel):
     @field_validator("nome")
     @classmethod
     def nome_nao_vazio(cls, v):
-        if not v.strip():
+        if v is not None and not v.strip():
             raise ValueError("Nome não pode ser vazio")
         return v
 
@@ -31,6 +31,8 @@ class UserCreate(BaseModel):
     @field_validator("telefone")
     @classmethod
     def telefone_valido(cls, v):
+        if v is None:
+            return v
         if not re.match(TELEFONE_REGEX, v):
             raise ValueError("Telefone inválido")
         return v
@@ -45,12 +47,28 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    nome: str
-    telefone: str
+    nome: Optional[str] = None
+    telefone: Optional[str] = None
     email: str
     data_nascimento: Optional[date] = None
     timezone: str = "America/Sao_Paulo"
     timezone_confirmed: bool = False
+
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+
+    @field_validator("name")
+    @classmethod
+    def nome_apelido_valido(cls, v):
+        if v is None:
+            return v
+        normalized = v.strip()
+        if len(normalized) < 2:
+            raise ValueError("Nome deve ter pelo menos 2 caracteres")
+        if len(normalized) > 60:
+            raise ValueError("Nome deve ter no máximo 60 caracteres")
+        return normalized
 
 
 class TimezoneUpdate(BaseModel):

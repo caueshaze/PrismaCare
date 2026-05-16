@@ -32,8 +32,8 @@ def init_db():
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nome TEXT NOT NULL,
-                telefone TEXT NOT NULL,
+                nome TEXT,
+                telefone TEXT,
                 email TEXT NOT NULL UNIQUE,
                 senha TEXT NOT NULL,
                 data_nascimento TEXT,
@@ -175,5 +175,44 @@ def init_db():
             except sqlite3.OperationalError as exc:
                 if "duplicate column name" not in str(exc).lower():
                     raise
+
+        user_columns = conn.execute("PRAGMA table_info(users)").fetchall()
+        must_rebuild_users = any(
+            column["name"] in {"nome", "telefone"} and column["notnull"] == 1
+            for column in user_columns
+        )
+        if must_rebuild_users:
+            conn.execute("PRAGMA foreign_keys = OFF")
+            conn.executescript("""
+                CREATE TABLE users_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nome TEXT,
+                    telefone TEXT,
+                    email TEXT NOT NULL UNIQUE,
+                    senha TEXT NOT NULL,
+                    data_nascimento TEXT,
+                    timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
+                    timezone_confirmed INTEGER NOT NULL DEFAULT 0
+                );
+
+                INSERT INTO users_new (
+                    id, nome, telefone, email, senha, data_nascimento, timezone, timezone_confirmed
+                )
+                SELECT
+                    id,
+                    NULLIF(nome, ''),
+                    NULLIF(telefone, ''),
+                    email,
+                    senha,
+                    data_nascimento,
+                    COALESCE(timezone, 'America/Sao_Paulo'),
+                    COALESCE(timezone_confirmed, 0)
+                FROM users;
+
+                DROP TABLE users;
+                ALTER TABLE users_new RENAME TO users;
+            """)
+            conn.commit()
+            conn.execute("PRAGMA foreign_keys = ON")
     finally:
         conn.close()

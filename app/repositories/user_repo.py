@@ -1,7 +1,7 @@
 import sqlite3
 
 
-def criar_usuario(conn: sqlite3.Connection, nome: str, telefone: str,
+def criar_usuario(conn: sqlite3.Connection, nome: str | None, telefone: str | None,
                   email: str, senha: str, data_nascimento: str | None,
                   timezone: str = "America/Sao_Paulo") -> dict:
     cursor = conn.execute(
@@ -11,6 +11,15 @@ def criar_usuario(conn: sqlite3.Connection, nome: str, telefone: str,
     )
     conn.commit()
     return buscar_usuario_por_id(conn, cursor.lastrowid)
+
+
+def atualizar_nome(conn: sqlite3.Connection, user_id: int, nome: str | None) -> dict | None:
+    conn.execute(
+        "UPDATE users SET nome = ? WHERE id = ?",
+        (nome, user_id),
+    )
+    conn.commit()
+    return buscar_usuario_por_id(conn, user_id)
 
 
 def atualizar_timezone(conn: sqlite3.Connection, user_id: int, timezone: str) -> dict | None:
