@@ -39,11 +39,12 @@ function isPhoneCandidate(value: string): boolean {
 }
 
 export default function AuthEntryScreen({ navigation }: Props) {
-  const { signIn } = useContext(AuthContext);
+  const { signIn, signInWithGoogle } = useContext(AuthContext);
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -133,6 +134,19 @@ export default function AuthEntryScreen({ navigation }: Props) {
       Alert.alert(isNew ? 'Erro ao criar conta' : 'Erro ao entrar', e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    setError(undefined);
+    try {
+      const didAuthenticate = await signInWithGoogle();
+      if (!didAuthenticate) return;
+    } catch (e: any) {
+      Alert.alert('Erro ao entrar com Google', e.message ?? 'Não foi possível continuar com Google.');
+    } finally {
+      setGoogleLoading(false);
     }
   }
 
@@ -287,10 +301,17 @@ export default function AuthEntryScreen({ navigation }: Props) {
                       <View style={styles.dividerLine} />
                     </View>
 
-                    <View style={styles.socialDisabledBtn}>
+                    <TouchableOpacity
+                      style={[styles.socialBtn, googleLoading && styles.socialBtnDisabled]}
+                      onPress={handleGoogleSignIn}
+                      activeOpacity={0.88}
+                      disabled={googleLoading}
+                    >
                       <Ionicons name="logo-google" size={20} color={colors.textSecondary} />
-                      <Text style={styles.socialDisabledText}>Google em breve</Text>
-                    </View>
+                      <Text style={styles.socialText}>
+                        {googleLoading ? 'Conectando...' : 'Continuar com Google'}
+                      </Text>
+                    </TouchableOpacity>
                   </>
                 ) : null}
               </Animated.View>
@@ -410,7 +431,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  socialDisabledBtn: {
+  socialBtn: {
     minHeight: 52,
     borderRadius: 16,
     borderWidth: 1.5,
@@ -420,9 +441,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    opacity: 0.9,
   },
-  socialDisabledText: {
+  socialBtnDisabled: {
+    opacity: 0.7,
+  },
+  socialText: {
     fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '700',

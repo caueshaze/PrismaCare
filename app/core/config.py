@@ -7,6 +7,7 @@ from pathlib import Path
 class Settings:
     jwt_secret: str
     jwt_alg: str
+    google_web_client_id: str
     access_ttl_min: int
     refresh_ttl_days: int
     cors_allow_origins: list[str]
@@ -81,6 +82,7 @@ def load_settings() -> Settings:
     return Settings(
         jwt_secret=_get_required("JWT_SECRET"),
         jwt_alg=os.getenv("JWT_ALG", "HS256"),
+        google_web_client_id=_get_required("GOOGLE_WEB_CLIENT_ID"),
         access_ttl_min=_get_int("ACCESS_TTL_MIN", 15),
         refresh_ttl_days=_get_int("REFRESH_TTL_DAYS", 14),
         cors_allow_origins=origins,

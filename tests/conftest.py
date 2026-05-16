@@ -4,6 +4,7 @@ import sqlite3
 # Deve ser setado ANTES de qualquer import do app para que load_settings() leia corretamente
 os.environ.setdefault("DISABLE_SCHEDULER", "true")
 os.environ.setdefault("JWT_SECRET", "test-secret-key-for-pytest-only")
+os.environ.setdefault("GOOGLE_WEB_CLIENT_ID", "test-google-web-client-id.apps.googleusercontent.com")
 
 import pytest
 from fastapi.testclient import TestClient

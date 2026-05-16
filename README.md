@@ -46,6 +46,7 @@ O PrismaCare é um sistema acadêmico voltado ao gerenciamento de medicamentos, 
 ## Funcionalidades
 
 - Cadastro e autenticação de usuários com JWT
+- Login com Google em Android development build
 - CRUD de medicamentos, contatos de segurança e agendamentos
 - Listagem automática de doses do dia com status (`PENDENTE`, `CONFIRMADO`, `ATRASADO`)
 - Confirmação de dose pelo app mobile
@@ -172,6 +173,12 @@ users
  └── auth_events         (user_id → users.id)
 ```
 
+Campos extras de autenticação social ficam diretamente em `users`:
+
+- `auth_provider`
+- `google_sub`
+- `avatar_url`
+
 ---
 
 ## Fluxo principal
@@ -201,6 +208,7 @@ Usuário cria conta
 | Grupo | Método | Endpoint | Descrição |
 |---|---|---|---|
 | **Auth** | POST | `/api/auth/login` | Login com email e senha |
+| | POST | `/api/auth/google` | Login com Google via `id_token` validado no backend |
 | | POST | `/api/auth/refresh` | Renovar access token |
 | | POST | `/api/auth/logout` | Revogar sessão atual |
 | | POST | `/api/auth/logout-all` | Revogar todas as sessões |
@@ -244,6 +252,7 @@ Copie `.env.example` para `.env` e configure:
 ```env
 JWT_SECRET=           # obrigatório — gere com: openssl rand -base64 32
 JWT_ALG=HS256
+GOOGLE_WEB_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
 ACCESS_TTL_MIN=15
 REFRESH_TTL_DAYS=14
 CORS_ALLOW_ORIGINS=http://localhost:8081
@@ -256,9 +265,17 @@ LOGIN_LOCKOUT_MAX_MINUTES=60
 RATE_LIMIT_LOGIN_PER_MIN=10
 RATE_LIMIT_REFRESH_PER_MIN=20
 RATE_LIMIT_API_PER_MIN=120
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
 ```
 
 Em VPS/produção, mantenha `ENABLE_MANUAL_MONITOR_ENDPOINT=false`. Essa flag bloqueia apenas o disparo manual via `POST /api/monitor/varredura`; a execução automática do APScheduler continua funcionando normalmente.
+
+### Google Sign-In
+
+- `GOOGLE_WEB_CLIENT_ID` é usado pelo backend como `audience` na validação do token Google.
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` é usado pelo app como `webClientId`.
+- Além do Web Client ID, o Google Cloud também precisa de um OAuth client Android com package `com.caueshaze.prismacare` e os SHA-1/SHA-256 do development build.
+- Google Sign-In não funciona no Expo Go. A validação deve ser feita em Android development build.
 
 ---
 

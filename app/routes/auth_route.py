@@ -1,8 +1,11 @@
 import sqlite3
+import secrets
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from pydantic import BaseModel
 
 from app.core.audit import audit_event
@@ -36,6 +39,10 @@ class LookupEmailRequest(BaseModel):
 class RegisterRequest(BaseModel):
     email: str
     password: str
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
 
 
 def _auth_response(user: dict, access_token: str, refresh_token: str) -> dict:
@@ -138,6 +145,143 @@ def process_login(
     return _auth_response(user, access_token, refresh_token)
 
 
+def process_google_login(
+    conn: sqlite3.Connection,
+    request: Request,
+    google_token: str,
+) -> dict:
+    ip = client_ip(request)
+    ua = user_agent(request)
+
+    try:
+        payload = google_id_token.verify_oauth2_token(
+            google_token,
+            google_requests.Request(),
+            settings.google_web_client_id,
+        )
+    except ValueError:
+        auth_repo.registrar_evento_auth(
+            conn,
+            event="google_login_failed",
+            success=False,
+            user_id=None,
+            email=None,
+            ip=ip,
+            user_agent=ua,
+            reason="invalid_id_token",
+        )
+        audit_event("google_login_failed", ip=ip, reason="invalid_id_token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Google inválido")
+
+    if payload.get("aud") != settings.google_web_client_id:
+        auth_repo.registrar_evento_auth(
+            conn,
+            event="google_login_failed",
+            success=False,
+            user_id=None,
+            email=None,
+            ip=ip,
+            user_agent=ua,
+            reason="invalid_audience",
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Google inválido")
+
+    raw_email = payload.get("email")
+    if not isinstance(raw_email, str) or not raw_email.strip():
+        auth_repo.registrar_evento_auth(
+            conn,
+            event="google_login_failed",
+            success=False,
+            user_id=None,
+            email=None,
+            ip=ip,
+            user_agent=ua,
+            reason="missing_email",
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Conta Google sem e-mail válido")
+
+    if payload.get("email_verified") is not True:
+        auth_repo.registrar_evento_auth(
+            conn,
+            event="google_login_failed",
+            success=False,
+            user_id=None,
+            email=raw_email,
+            ip=ip,
+            user_agent=ua,
+            reason="email_not_verified",
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Conta Google precisa ter e-mail verificado")
+
+    email = raw_email.strip().lower()
+    enforce_login_rate_limit(request, email)
+
+    google_sub = payload.get("sub")
+    if not isinstance(google_sub, str) or not google_sub.strip():
+        auth_repo.registrar_evento_auth(
+            conn,
+            event="google_login_failed",
+            success=False,
+            user_id=None,
+            email=email,
+            ip=ip,
+            user_agent=ua,
+            reason="missing_google_sub",
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Google inválido")
+
+    google_sub = google_sub.strip()
+    name = payload.get("name")
+    avatar_url = payload.get("picture")
+
+    user = user_repo.buscar_usuario_por_google_sub(conn, google_sub)
+    if not user:
+        existing_by_email = user_repo.buscar_usuario_por_email(conn, email)
+        if existing_by_email:
+            user = user_repo.vincular_google_identity(
+                conn,
+                existing_by_email["id"],
+                google_sub=google_sub,
+                avatar_url=avatar_url if isinstance(avatar_url, str) else None,
+            )
+        else:
+            generated_password = secrets.token_urlsafe(32)
+            user = user_repo.criar_usuario(
+                conn,
+                nome=name.strip() if isinstance(name, str) and name.strip() else None,
+                telefone=None,
+                email=email,
+                senha=hash_senha(generated_password),
+                data_nascimento=None,
+                auth_provider="google",
+                google_sub=google_sub,
+                avatar_url=avatar_url if isinstance(avatar_url, str) else None,
+            )
+
+    access_token, refresh_token, session_id = gerar_par_tokens(user["id"], user["email"])
+    refresh_payload = extrair_payload(refresh_token, expected_type="refresh")
+    auth_repo.criar_refresh_token(
+        conn,
+        user_id=user["id"],
+        session_id=session_id,
+        token_hash=hash_token(refresh_token),
+        expires_at=datetime.fromtimestamp(refresh_payload["exp"], timezone.utc).isoformat(),
+        ip=ip,
+        user_agent=ua,
+    )
+    auth_repo.registrar_evento_auth(
+        conn,
+        event="google_login_success",
+        success=True,
+        user_id=user["id"],
+        email=user["email"],
+        ip=ip,
+        user_agent=ua,
+    )
+    audit_event("google_login_success", user_id=user["id"], ip=ip)
+    return _auth_response(user, access_token, refresh_token)
+
+
 @router.post("/lookup-email")
 def lookup_email(payload: LookupEmailRequest, conn: sqlite3.Connection = Depends(get_db)):
     email = _normalize_email(payload.email)
@@ -178,6 +322,15 @@ def login(
     conn: sqlite3.Connection = Depends(get_db),
 ):
     return process_login(conn, request, form_data.username, form_data.password)
+
+
+@router.post("/google")
+def google_login(
+    request: Request,
+    payload: GoogleLoginRequest,
+    conn: sqlite3.Connection = Depends(get_db),
+):
+    return process_google_login(conn, request, payload.id_token)
 
 
 @router.post("/refresh")
