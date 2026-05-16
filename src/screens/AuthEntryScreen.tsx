@@ -34,6 +34,10 @@ function validateEmail(email: string): boolean {
   return /\S+@\S+\.\S+/.test(email.trim());
 }
 
+function isPhoneCandidate(value: string): boolean {
+  return value.replace(/\D/g, '').length >= 8;
+}
+
 export default function AuthEntryScreen({ navigation }: Props) {
   const { signIn } = useContext(AuthContext);
   const [step, setStep] = useState<Step>('email');
@@ -89,8 +93,13 @@ export default function AuthEntryScreen({ navigation }: Props) {
   }, [step, stepProgress]);
 
   async function handleEmail() {
+    if (isPhoneCandidate(email)) {
+      setError('Login com número será habilitado em breve. Por enquanto, entre com seu e-mail e senha.');
+      return;
+    }
+
     if (!validateEmail(email)) {
-      setError('Informe um e-mail válido.');
+      setError('Informe um número ou e-mail válido.');
       return;
     }
 
@@ -134,13 +143,13 @@ export default function AuthEntryScreen({ navigation }: Props) {
   }
 
   const title = step === 'email'
-    ? 'Insira seu e-mail para continuar'
+    ? 'Inicie com seu número ou e-mail'
     : isExisting
       ? 'Bem-vindo de volta!'
       : 'Crie uma senha';
 
   const subtitle = step === 'email'
-    ? ''
+    ? 'Use seu e-mail para entrar hoje. O acesso por número será liberado em breve.'
     : normalizedEmail;
 
   const entranceStyle = {
@@ -224,15 +233,15 @@ export default function AuthEntryScreen({ navigation }: Props) {
 
                 {step === 'email' ? (
                   <InputField
-                    label="E-mail"
-                    iconName="mail-outline"
-                    placeholder="seuemail@exemplo.com"
+                    label="Número ou e-mail"
+                    iconName="person-outline"
+                    placeholder="Seu número ou e-mail"
                     value={email}
                     onChangeText={(value) => {
                       setEmail(value);
                       setError(undefined);
                     }}
-                    keyboardType="email-address"
+                    keyboardType="default"
                     autoCapitalize="none"
                     autoCorrect={false}
                     error={error}
@@ -269,6 +278,21 @@ export default function AuthEntryScreen({ navigation }: Props) {
                   iconName={step === 'email' ? 'arrow-forward' : 'checkmark'}
                   style={styles.primaryButton}
                 />
+
+                {step === 'email' ? (
+                  <>
+                    <View style={styles.dividerRow}>
+                      <View style={styles.dividerLine} />
+                      <Text style={styles.dividerText}>ou continue com</Text>
+                      <View style={styles.dividerLine} />
+                    </View>
+
+                    <View style={styles.socialDisabledBtn}>
+                      <Ionicons name="logo-google" size={20} color={colors.textSecondary} />
+                      <Text style={styles.socialDisabledText}>Google em breve</Text>
+                    </View>
+                  </>
+                ) : null}
               </Animated.View>
             </Animated.View>
           </ScrollView>
@@ -367,4 +391,40 @@ const styles = StyleSheet.create({
   },
   forgotText: { color: colors.primary, fontWeight: '700' },
   primaryButton: { marginTop: 4 },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 22,
+    marginBottom: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  socialDisabledBtn: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    opacity: 0.9,
+  },
+  socialDisabledText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '700',
+  },
 });
