@@ -148,6 +148,9 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_confirmacoes_data_hora_prevista
             ON confirmacoes (data_hora_prevista);
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_confirmacoes_agendamento_horario
+            ON confirmacoes (id_agendamento, data_hora_prevista);
         """)
         conn.commit()
 
