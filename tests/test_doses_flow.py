@@ -48,6 +48,22 @@ def test_doses_nao_duplicadas(client, headers_a):
     assert len(doses) == 1
 
 
+def test_dose_confirmada_nao_gera_nova_pendente_no_mesmo_horario(client, headers_a):
+    _criar_stack(client, headers_a)
+
+    primeira_resposta = client.get("/api/doses/hoje", headers=headers_a).json()
+    confirmacao_id = primeira_resposta[0]["confirmacao_id"]
+
+    confirmada = client.put(f"/api/confirmacoes/{confirmacao_id}/confirmar", headers=headers_a)
+    assert confirmada.status_code == 200
+    assert confirmada.json()["status"] == "CONFIRMADO"
+
+    doses = client.get("/api/doses/hoje", headers=headers_a).json()
+    assert len(doses) == 1
+    assert doses[0]["confirmacao_id"] == confirmacao_id
+    assert doses[0]["status"] == "CONFIRMADO"
+
+
 # ---------- Frequência semanal ----------
 
 def test_agendamento_semanal_dia_correto(client, headers_a):
