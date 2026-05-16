@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useContext, useEffect } from 'react';
 import { Alert } from 'react-native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -80,6 +81,13 @@ function Navigation() {
 
 export default function App() {
   useEffect(() => {
+    const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    if (webClientId) {
+      GoogleSignin.configure({
+        webClientId,
+        offlineAccess: false,
+      });
+    }
     configureDoseNotifications();
   }, []);
 

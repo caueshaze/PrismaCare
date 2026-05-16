@@ -181,3 +181,10 @@ export async function loginRequest(username: string, password: string) {
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? 'Login falhou');
   return res.json() as Promise<AuthResponse>;
 }
+
+export async function googleLoginRequest(idToken: string) {
+  return api<AuthResponse>('/api/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ id_token: idToken }),
+  });
+}

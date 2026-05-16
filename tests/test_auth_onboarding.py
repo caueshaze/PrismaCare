@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
 
 def test_minimal_register_lookup_login_and_profile_update(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "prismacare-test.db"))
+    monkeypatch.setenv("GOOGLE_WEB_CLIENT_ID", "test-google-web-client-id.apps.googleusercontent.com")
 
     import app.database as database
 

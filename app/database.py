@@ -128,6 +128,9 @@ def init_db():
                 telefone TEXT,
                 email TEXT NOT NULL UNIQUE,
                 senha TEXT NOT NULL,
+                auth_provider TEXT NOT NULL DEFAULT 'local',
+                google_sub TEXT,
+                avatar_url TEXT,
                 data_nascimento TEXT,
                 timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
                 timezone_confirmed INTEGER NOT NULL DEFAULT 0
@@ -269,6 +272,9 @@ def init_db():
         for sql in [
             "ALTER TABLE users ADD COLUMN timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo'",
             "ALTER TABLE users ADD COLUMN timezone_confirmed INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'local'",
+            "ALTER TABLE users ADD COLUMN google_sub TEXT",
+            "ALTER TABLE users ADD COLUMN avatar_url TEXT",
         ]:
             try:
                 conn.execute(sql)
@@ -291,13 +297,17 @@ def init_db():
                     telefone TEXT,
                     email TEXT NOT NULL UNIQUE,
                     senha TEXT NOT NULL,
+                    auth_provider TEXT NOT NULL DEFAULT 'local',
+                    google_sub TEXT,
+                    avatar_url TEXT,
                     data_nascimento TEXT,
                     timezone TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
                     timezone_confirmed INTEGER NOT NULL DEFAULT 0
                 );
 
                 INSERT INTO users_new (
-                    id, nome, telefone, email, senha, data_nascimento, timezone, timezone_confirmed
+                    id, nome, telefone, email, senha, auth_provider, google_sub, avatar_url,
+                    data_nascimento, timezone, timezone_confirmed
                 )
                 SELECT
                     id,
@@ -305,6 +315,9 @@ def init_db():
                     NULLIF(telefone, ''),
                     email,
                     senha,
+                    COALESCE(auth_provider, 'local'),
+                    google_sub,
+                    avatar_url,
                     data_nascimento,
                     COALESCE(timezone, 'America/Sao_Paulo'),
                     COALESCE(timezone_confirmed, 0)
@@ -315,5 +328,14 @@ def init_db():
             """)
             conn.commit()
             conn.execute("PRAGMA foreign_keys = ON")
+
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub_unique
+            ON users(google_sub)
+            WHERE google_sub IS NOT NULL
+            """
+        )
+        conn.commit()
     finally:
         conn.close()

@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
+import { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } from '@react-native-google-signin/google-signin';
 import {
   configureAuthHandlers,
   fetchMe,
+  googleLoginRequest,
   loginRequest,
   patchProfileName,
   SessionTokens,
@@ -15,6 +17,7 @@ type AuthContextType = {
   timezoneConfirmed: boolean | null;
   sessionExpiredMessage: string | null;
   signIn(username: string, password: string): Promise<void>;
+  signInWithGoogle(): Promise<boolean>;
   signOut(): void;
   consumeSessionExpiredMessage(): void;
   markTimezoneConfirmed(): void;
@@ -50,6 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signIn(username: string, password: string) {
     const payload = await loginRequest(username, password);
+    await applySessionPayload(payload);
+  }
+
+  async function applySessionPayload(payload: Awaited<ReturnType<typeof loginRequest>>) {
     setSession({
       accessToken: payload.access_token,
       refreshToken: payload.refresh_token,
@@ -59,6 +66,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const profile = await fetchMe();
     setProfile(profile);
     setTimezoneConfirmed(profile.timezone_confirmed);
+  }
+
+  async function signInWithGoogle(): Promise<boolean> {
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+
+      if (!isSuccessResponse(response)) {
+        return false;
+      }
+
+      const idToken = response.data.idToken;
+      if (!idToken) {
+        throw new Error('Não foi possível obter sua credencial Google. Tente novamente.');
+      }
+
+      const payload = await googleLoginRequest(idToken);
+      await applySessionPayload(payload);
+      return true;
+    } catch (error: unknown) {
+      if (isErrorWithCode(error) && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        throw new Error('Google Play Services indisponível neste dispositivo.');
+      }
+      throw error instanceof Error ? error : new Error('Não foi possível entrar com Google.');
+    }
   }
 
   function signOut() {
@@ -88,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timezoneConfirmed,
       sessionExpiredMessage,
       signIn,
+      signInWithGoogle,
       signOut,
       consumeSessionExpiredMessage,
       markTimezoneConfirmed,
