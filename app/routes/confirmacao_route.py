@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.constants import ConfirmacaoStatus
+from app.core.constants import StatusConfirmacao
 from app.database import get_db
 from app.repositories import confirmacao_repo, agendamento_repo
 from app.schemas.confirmacao_schema import ConfirmacaoCreate, ConfirmacaoResponse
@@ -71,7 +71,7 @@ def confirmar_uso(
     atualizada = confirmacao_repo.atualizar_confirmacao(
         conn,
         confirmacao_id=confirmacao_id,
-        status=ConfirmacaoStatus.CONFIRMADO,
+        status=StatusConfirmacao.CONFIRMADO,
         data_hora_confirmacao=datetime.now(timezone.utc).isoformat(),
     )
     return atualizada

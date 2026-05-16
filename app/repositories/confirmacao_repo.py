@@ -1,6 +1,6 @@
 import sqlite3
 
-from app.core.constants import ConfirmacaoStatus
+from app.core.constants import StatusConfirmacao
 
 
 def criar_confirmacao(conn: sqlite3.Connection, id_agendamento: int,
@@ -65,15 +65,15 @@ def buscar_candidatas_para_notificacao(conn: sqlite3.Connection) -> list[dict]:
            WHERE c.data_hora_confirmacao IS NULL
              AND c.status = ?
              AND ct.ativo = 1""",
-        (ConfirmacaoStatus.PENDENTE,),
+        (StatusConfirmacao.PENDENTE,),
     ).fetchall()
     return [dict(row) for row in rows]
 
 
-def marcar_como_atrasado(conn: sqlite3.Connection, confirmacao_id: int) -> None:
+def marcar_como_nao_confirmado(conn: sqlite3.Connection, confirmacao_id: int) -> None:
     conn.execute(
         "UPDATE confirmacoes SET status = ? WHERE id = ?",
-        (ConfirmacaoStatus.ATRASADO, confirmacao_id),
+        (StatusConfirmacao.NAO_CONFIRMADO, confirmacao_id),
     )
     conn.commit()
 
