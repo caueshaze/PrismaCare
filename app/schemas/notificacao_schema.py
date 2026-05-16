@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Literal
 
-from app.core.constants import NotificacaoStatus
+from app.core.constants import StatusEnvio
 
 
 class NotificacaoCreate(BaseModel):
@@ -10,7 +10,7 @@ class NotificacaoCreate(BaseModel):
     id_confirmacao: int
     data_hora_envio: datetime
     tipo_mensagem: str
-    status_envio: Literal["AGUARDANDO", "ENVIADO", "FALHA"] = NotificacaoStatus.AGUARDANDO
+    status_envio: Literal["AGUARDANDO", "ENVIADO", "FALHA"] = StatusEnvio.AGUARDANDO
 
 
 class NotificacaoResponse(BaseModel):
