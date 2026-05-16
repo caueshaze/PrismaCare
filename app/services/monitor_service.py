@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from app.core.constants import StatusConfirmacao, StatusEnvio
 from app.database import get_connection
+from app.services.whatsapp_service import enviar_whatsapp_simulado
 
 TOLERANCIA_MINUTOS = 30
 
@@ -17,6 +18,7 @@ def varrer_e_notificar() -> dict:
     conn = get_connection()
     confirmacoes_atualizadas = 0
     notificacoes_criadas = 0
+    notificacoes_enviadas = 0
 
     try:
         limite = (datetime.now() - timedelta(minutes=TOLERANCIA_MINUTOS)).strftime(
@@ -92,12 +94,47 @@ def varrer_e_notificar() -> dict:
                     (
                         contato_id,
                         confirmacao_id,
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "dose_nao_confirmada",
+                        None,
+                        "WHATSAPP_SIMULADO",
                         StatusEnvio.AGUARDANDO,
                     ),
                 )
                 notificacoes_criadas += 1
+
+                dados = conn.execute(
+                    """
+                    SELECT ct.telefone, m.nome AS nome_medicamento, m.dosagem,
+                           c.data_hora_prevista
+                    FROM contatos ct, agendamentos a, medicamentos m, confirmacoes c
+                    WHERE ct.id = ? AND a.id = ?
+                      AND m.id = a.id_medicamento
+                      AND c.id = ?
+                    """,
+                    (contato_id, agendamento_id, confirmacao_id),
+                ).fetchone()
+
+                if dados:
+                    horario = dados["data_hora_prevista"].split(" ")[1][:5]
+                    mensagem = (
+                        f"[PrismaCare] Atenção: o medicamento "
+                        f"{dados['nome_medicamento']} ({dados['dosagem']}) "
+                        f"previsto para {horario} não foi confirmado pelo usuário."
+                    )
+                    resultado = enviar_whatsapp_simulado(dados["telefone"], mensagem)
+                    conn.execute(
+                        """
+                        UPDATE notificacoes
+                        SET status_envio = ?, data_hora_envio = ?
+                        WHERE id_contato = ? AND id_confirmacao = ?
+                        """,
+                        (
+                            resultado["status_envio"],
+                            resultado["data_hora_envio"],
+                            contato_id,
+                            confirmacao_id,
+                        ),
+                    )
+                    notificacoes_enviadas += 1
 
         conn.commit()
 
@@ -107,4 +144,5 @@ def varrer_e_notificar() -> dict:
     return {
         "confirmacoes_atualizadas": confirmacoes_atualizadas,
         "notificacoes_criadas": notificacoes_criadas,
+        "notificacoes_enviadas": notificacoes_enviadas,
     }
