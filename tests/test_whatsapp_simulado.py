@@ -51,7 +51,7 @@ def test_notificacao_simulada_fica_enviada(client, headers_a):
     n = notificacoes[0]
     assert n["status_envio"] == "ENVIADO"
     assert n["data_hora_envio"] is not None
-    assert n["tipo_mensagem"] == "WHATSAPP_SIMULADO"
+    assert n["tipo_mensagem"] == "WHATSAPP"
 
 
 # Cenário 2 — varredura dupla não duplica notificação
