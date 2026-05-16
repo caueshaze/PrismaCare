@@ -16,14 +16,17 @@ def create_medicamento(
     usuario: dict = Depends(obter_usuario_logado),
     conn: sqlite3.Connection = Depends(get_db),
 ):
-    novo = medicamento_repo.criar_medicamento(
-        conn,
-        id_usuario=usuario["id"],
-        nome=medicamento.nome,
-        dosagem=medicamento.dosagem,
-        observacao=medicamento.observacao,
-        ativo=medicamento.ativo,
-    )
+    try:
+        novo = medicamento_repo.criar_medicamento(
+            conn,
+            id_usuario=usuario["id"],
+            nome=medicamento.nome,
+            dosagem=medicamento.dosagem,
+            observacao=medicamento.observacao,
+            ativo=medicamento.ativo,
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=422, detail="Referência inválida: usuário não encontrado")
     return novo
 
 
