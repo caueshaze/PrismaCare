@@ -18,6 +18,7 @@ import { colors } from '../theme/colors';
 import { AuthContext } from '../contexts/AuthContext';
 import { RootStackParamList } from '../../App';
 import { api } from '../services/api';
+import { DoseReminderInput, syncDoseReminders } from '../services/notificationService';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -49,13 +50,15 @@ export default function HomeScreen({ navigation }: Props) {
 
       async function loadSuggestions() {
         try {
-          const [contacts, medications] = await Promise.all([
+          const [contacts, medications, doses] = await Promise.all([
             api<unknown[]>('/api/contatos'),
             api<unknown[]>('/api/medicamentos'),
+            api<DoseReminderInput[]>('/api/doses/hoje'),
           ]);
           if (!active) return;
           setHasContacts(contacts.length > 0);
           setHasMedications(medications.length > 0);
+          await syncDoseReminders(doses);
         } catch (e: any) {
           if (!active) return;
           Alert.alert('Erro', e.message);
