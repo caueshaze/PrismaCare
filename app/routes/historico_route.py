@@ -1,6 +1,9 @@
 import sqlite3
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends, Query, HTTPException
+
 from app.database import get_db
 from app.repositories import historico_repo
 from app.schemas.historico_schema import HistoricoItemResponse
@@ -16,14 +19,15 @@ router = APIRouter()
     description="Retorna o histórico de doses do usuário autenticado em um intervalo de datas.",
 )
 def listar_historico(
-    data_inicio: date = Query(default=None, description="Data inicial (YYYY-MM-DD)"),
-    data_fim: date = Query(default=None, description="Data final (YYYY-MM-DD)"),
+    data_inicio: date | None = Query(default=None, description="Data inicial (YYYY-MM-DD)"),
+    data_fim: date | None = Query(default=None, description="Data final (YYYY-MM-DD)"),
     usuario: dict = Depends(obter_usuario_logado),
     conn: sqlite3.Connection = Depends(get_db),
 ):
-    # Padrão: últimos 30 dias
+    tz = ZoneInfo(usuario.get("timezone") or "America/Sao_Paulo")
+
     if data_fim is None:
-        data_fim = date.today()
+        data_fim = datetime.now(tz).date()
     if data_inicio is None:
         data_inicio = data_fim - timedelta(days=30)
 

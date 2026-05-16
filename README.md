@@ -85,6 +85,7 @@ PrismaCare/
 │   │   ├── contato_route.py      # /api/contatos/*
 │   │   ├── agendamento_route.py  # /api/agendamentos/*
 │   │   ├── dose_route.py         # /api/doses/*
+│   │   ├── historico_route.py    # /api/doses/historico
 │   │   ├── confirmacao_route.py  # /api/confirmacoes/*
 │   │   ├── notificacao_route.py  # /api/notificacoes/*
 │   │   └── monitor_route.py      # /api/monitor/*
@@ -96,6 +97,7 @@ PrismaCare/
 │   │   ├── contato_repo.py
 │   │   ├── agendamento_repo.py
 │   │   ├── dose_repo.py
+│   │   ├── historico_repo.py
 │   │   ├── confirmacao_repo.py
 │   │   └── notificacao_repo.py
 │   │
@@ -105,6 +107,7 @@ PrismaCare/
 │   │   ├── contato_schema.py
 │   │   ├── agendamento_schema.py
 │   │   ├── dose_schema.py
+│   │   ├── historico_schema.py
 │   │   ├── confirmacao_schema.py
 │   │   └── notificacao_schema.py
 │   │
@@ -211,6 +214,7 @@ Usuário cria conta
 | **Agendamentos** | GET/POST | `/api/agendamentos` | Listar / criar |
 | | GET/PATCH/DELETE | `/api/agendamentos/{id}` | Buscar / atualizar / remover |
 | **Doses** | GET | `/api/doses/hoje` | Doses do dia com status |
+| | GET | `/api/doses/historico?data_inicio=YYYY-MM-DD&data_fim=YYYY-MM-DD` | Histórico autenticado de doses por período. Se omitido, usa os últimos 30 dias |
 | **Confirmações** | GET/POST | `/api/confirmacoes` | Listar / criar |
 | | PUT | `/api/confirmacoes/{id}/confirmar` | Confirmar dose tomada |
 | **Notificações** | GET/POST | `/api/notificacoes` | Listar / criar |
