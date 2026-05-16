@@ -23,15 +23,17 @@ def create_notificacao(
     if not confirmacao_repo.pertence_ao_usuario(conn, notificacao.id_confirmacao, usuario["id"]):
         raise HTTPException(status_code=403, detail="Acesso negado à confirmação")
 
-    envio = notificacao.data_hora_envio.isoformat() if notificacao.data_hora_envio else None
-    nova = notificacao_repo.criar_notificacao(
-        conn,
-        id_contato=notificacao.id_contato,
-        id_confirmacao=notificacao.id_confirmacao,
-        data_hora_envio=envio,
-        tipo_mensagem=notificacao.tipo_mensagem,
-        status_envio=notificacao.status_envio,
-    )
+    try:
+        nova = notificacao_repo.criar_notificacao(
+            conn,
+            id_contato=notificacao.id_contato,
+            id_confirmacao=notificacao.id_confirmacao,
+            data_hora_envio=notificacao.data_hora_envio,
+            tipo_mensagem=notificacao.tipo_mensagem,
+            status_envio=notificacao.status_envio,
+        )
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Referência inválida: contato ou confirmação não encontrado")
     return nova
 
 

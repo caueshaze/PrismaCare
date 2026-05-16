@@ -24,15 +24,18 @@ def create_agendamento(
 
     data_inicio = str(agendamento.data_inicio) if agendamento.data_inicio else None
     data_fim = str(agendamento.data_fim) if agendamento.data_fim else None
-    novo = agendamento_repo.criar_agendamento(
-        conn,
-        id_medicamento=agendamento.id_medicamento,
-        horario=agendamento.horario,
-        frequencia=agendamento.frequencia,
-        data_inicio=data_inicio,
-        data_fim=data_fim,
-        ativo=agendamento.ativo,
-    )
+    try:
+        novo = agendamento_repo.criar_agendamento(
+            conn,
+            id_medicamento=agendamento.id_medicamento,
+            horario=agendamento.horario,
+            frequencia=agendamento.frequencia,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            ativo=agendamento.ativo,
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=422, detail="Referência inválida: medicamento não encontrado")
     return novo
 
 

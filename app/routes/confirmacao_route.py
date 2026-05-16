@@ -21,13 +21,16 @@ def create_confirmacao(
     if not agendamento_repo.pertence_ao_usuario(conn, confirmacao.id_agendamento, usuario["id"]):
         raise HTTPException(status_code=403, detail="Acesso negado")
 
-    nova = confirmacao_repo.criar_confirmacao(
-        conn,
-        id_agendamento=confirmacao.id_agendamento,
-        data_hora_prevista=confirmacao.data_hora_prevista,
-        data_hora_confirmacao=None,
-        status=confirmacao.status,
-    )
+    try:
+        nova = confirmacao_repo.criar_confirmacao(
+            conn,
+            id_agendamento=confirmacao.id_agendamento,
+            data_hora_prevista=confirmacao.data_hora_prevista,
+            data_hora_confirmacao=None,
+            status=confirmacao.status,
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=422, detail="Referência inválida: agendamento não encontrado")
     return nova
 
 
