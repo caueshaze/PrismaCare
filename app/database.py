@@ -26,6 +26,98 @@ def get_db():
         conn.close()
 
 
+_STATUS_PRIORITY = {
+    "CONFIRMADO": 4,
+    "NAO_CONFIRMADO": 3,
+    "PENDENTE": 2,
+    "CANCELADO": 1,
+}
+
+
+def _escolher_confirmacao_canonica(confirmacoes: list[sqlite3.Row]) -> sqlite3.Row:
+    return max(
+        confirmacoes,
+        key=lambda row: (
+            _STATUS_PRIORITY.get(row["status"], 0),
+            1 if row["data_hora_confirmacao"] else 0,
+            row["data_hora_confirmacao"] or "",
+            -row["id"],
+        ),
+    )
+
+
+def _mesclar_confirmacoes_duplicadas(conn: sqlite3.Connection) -> None:
+    duplicados = conn.execute(
+        """
+        SELECT id_agendamento, data_hora_prevista
+        FROM confirmacoes
+        WHERE data_hora_prevista IS NOT NULL
+        GROUP BY id_agendamento, data_hora_prevista
+        HAVING COUNT(*) > 1
+        """
+    ).fetchall()
+
+    for duplicado in duplicados:
+        confirmacoes = conn.execute(
+            """
+            SELECT id, status, data_hora_confirmacao
+            FROM confirmacoes
+            WHERE id_agendamento = ? AND data_hora_prevista = ?
+            ORDER BY id ASC
+            """,
+            (duplicado["id_agendamento"], duplicado["data_hora_prevista"]),
+        ).fetchall()
+        if len(confirmacoes) < 2:
+            continue
+
+        canonica = _escolher_confirmacao_canonica(confirmacoes)
+        duplicadas = [row for row in confirmacoes if row["id"] != canonica["id"]]
+
+        for row in duplicadas:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO notificacoes (
+                    id_contato,
+                    id_confirmacao,
+                    data_hora_envio,
+                    tipo_mensagem,
+                    status_envio
+                )
+                SELECT
+                    id_contato,
+                    ?,
+                    data_hora_envio,
+                    tipo_mensagem,
+                    status_envio
+                FROM notificacoes
+                WHERE id_confirmacao = ?
+                """,
+                (canonica["id"], row["id"]),
+            )
+            conn.execute(
+                "DELETE FROM notificacoes WHERE id_confirmacao = ?",
+                (row["id"],),
+            )
+
+        conn.execute(
+            """
+            UPDATE confirmacoes
+            SET status = ?, data_hora_confirmacao = ?
+            WHERE id = ?
+            """,
+            (
+                canonica["status"],
+                canonica["data_hora_confirmacao"],
+                canonica["id"],
+            ),
+        )
+
+        conn.executemany(
+            "DELETE FROM confirmacoes WHERE id = ?",
+            [(row["id"],) for row in duplicadas],
+        )
+
+
 def init_db():
     conn = get_connection()
     try:
@@ -148,9 +240,6 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_confirmacoes_data_hora_prevista
             ON confirmacoes (data_hora_prevista);
-
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_confirmacoes_agendamento_horario
-            ON confirmacoes (id_agendamento, data_hora_prevista);
         """)
         conn.commit()
 
@@ -166,6 +255,15 @@ def init_db():
             UPDATE notificacoes SET status_envio = 'ENVIADO'    WHERE status_envio = 'enviado';
             UPDATE notificacoes SET status_envio = 'FALHA'      WHERE status_envio = 'falhou';
         """)
+        conn.commit()
+
+        _mesclar_confirmacoes_duplicadas(conn)
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_confirmacoes_agendamento_horario
+            ON confirmacoes (id_agendamento, data_hora_prevista)
+            """
+        )
         conn.commit()
 
         for sql in [
